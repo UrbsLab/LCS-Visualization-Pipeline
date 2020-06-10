@@ -91,9 +91,9 @@ class MPGenerator:
         for i in range(self.bits+1):
             if i != self.bits:
                 if i < self.addressbitcount:
-                    headerNames.append("M"+str(i))
+                    headerNames.append("A"+str(i))
                 else:
-                    headerNames.append("N" + str(i))
+                    headerNames.append("R" + str(i))
             else:
                 if self.do_instances and self.do_groups:
                     headerNames.append("Class")

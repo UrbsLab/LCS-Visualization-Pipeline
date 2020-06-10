@@ -18,20 +18,20 @@ import csv
 def main(argv):
     # CONTROL PANEL ####################################################################################################
     # Dataset Info
-    datapath = 'Datasets/vivekHetero.txt'
+    datapath = 'Datasets/mp6_full.csv'
     #datapath = 'Datasets/GAMETES/Files/Core/n2l2b2h2_0_EDM-1_01_hetLabel.txt'
     class_label = 'Class'
-    instance_label = None
-    group_label = 'Model'
+    instance_label = 'Instance'
+    group_label = 'Group'
     cv_count = 3
 
     # Experiment Info
     experiment_name = argv[1]
 
     # Training Info
-    learning_iterations = 16000
-    N = 1000
-    nu = 1
+    learning_iterations = 10000
+    N = 500
+    nu = 10
     attribute_tracking_method = 'wh'
     use_expert_knowledge = None
     random_state = None
@@ -233,12 +233,14 @@ def main(argv):
         #AT Score Clustermap############################################################################################
         g = seaborn.clustermap(AT_full_df, metric=pearsonDistance, method='ward', cmap='plasma')
         cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, train_instance_labels, AT_full_df.to_numpy())
-        clusters = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward')
+        clusters,colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward')
         color_dict = {}
+        color_count = 0
         for cluster in clusters:
-            random_color = randomHex()
+            random_color = colors[color_count]
             for inst_label in cluster:
                 color_dict[inst_label] = random_color
+            color_count += 1
         color_list = pd.Series(dict(sorted(color_dict.items())))
 
         group_dict = {}
@@ -260,6 +262,37 @@ def main(argv):
         g = seaborn.clustermap(AT_full_df, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage,row_colors=combo_list, cmap='plasma')
         plt.savefig('Outputs/' + experiment_name + '/visualizations/at/ATClustermap_' + str(cv) + '.png', dpi=300)
         plt.close('all')
+
+        for cluster_count in reversed(range(1,len(clusters))):
+            subclusters,colors = cluster_tree.getNSignificantClusters(cluster_count,p_value=0.05, sample_count=100, metric='correlation',method='ward')
+            color_dict = {}
+            color_count = 0
+            for cluster in subclusters:
+                random_color = colors[color_count]
+                for inst_label in cluster:
+                    color_dict[inst_label] = random_color
+                color_count += 1
+            color_list = pd.Series(dict(sorted(color_dict.items())))
+
+            group_dict = {}
+            for i in range(len(train_group_labels)):
+                if train_group_labels[i] in group_dict:
+                    group_dict[train_group_labels[i]].append(train_instance_labels[i])
+                else:
+                    group_dict[train_group_labels[i]] = [train_instance_labels[i]]
+
+            group_color_dict = {}
+            for group in group_dict:
+                random_color = group_colors[group]
+                for inst_label in group_dict[group]:
+                    group_color_dict[inst_label] = random_color
+            group_list = pd.Series(dict(sorted(group_color_dict.items())))
+
+            combo_list = pd.concat([group_list, color_list], axis=1)
+
+            g = seaborn.clustermap(AT_full_df, row_linkage=g.dendrogram_row.linkage,col_linkage=g.dendrogram_col.linkage, row_colors=combo_list, cmap='plasma')
+            plt.savefig('Outputs/' + experiment_name + '/visualizations/at/ATClustermap_' + str(cv) + '_'+str(cluster_count)+'.png', dpi=300)
+            plt.close('all')
 
         #Export .csv of AT cluster makeup and specificity and penetrance################################################
 
@@ -356,13 +389,15 @@ def main(argv):
         #Generate Clustermap
         g = seaborn.clustermap(AT_new_df, metric=pearsonDistance, method='ward', cmap='plasma')
         cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, complete_instance_labels, AT_new_df.to_numpy())
-        clusters = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward')
+        clusters,colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward')
 
         color_dict = {}
+        color_count = 0
         for cluster in clusters:
-            random_color = randomHex()
+            random_color = colors[color_count]
             for inst_label in cluster:
                 color_dict[inst_label] = random_color
+            color_count += 1
         color_list = pd.Series(dict(sorted(color_dict.items())))
 
         group_dict = {}
