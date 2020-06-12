@@ -91,7 +91,6 @@ def job(experiment_path,cv):
     r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
     rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage,list(range(num_rules)),rule_df.to_numpy())
     rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05,sample_count=100,metric=metric,method='ward',random_state=random_state)
-    print(len(rule_clusters))
     for rule_cluster_count in reversed(range(1,len(rule_clusters)+1)):
         if not os.path.exists(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters'):
             os.mkdir(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters')

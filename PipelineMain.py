@@ -17,7 +17,7 @@ Sample Run Commands:
 python PipelineMain.py --d Datasets/mp6_full.csv --o Outputs --e mp6ruletest --inst Instance --group Group --iter 10000 --N 500 --nu 10
 
 #1 Locus 2 Model Heterogeneity
-python PipelineMain.py --d Datasets/one.txt --o Outputs --e oneLocHetero --group Model --iter 20000 --N 1000 --nu 1
+python PipelineMain.py --d Datasets/one.txt --o Outputs --e ruleOne --group Model --iter 20000 --N 1000 --nu 1
 '''
 
 def main(argv):
@@ -39,7 +39,7 @@ def main(argv):
     parser.add_argument('--at-method', dest='attribute_tracking_method', type=str, default='wh')
     parser.add_argument('--random-state',dest='random_state',type=str,default='None')
 
-    parser.add_argument('--rulepop-method', dest='rulepop_clustering_method', type=str, default='pearson')
+    parser.add_argument('--rulepop-method', dest='rulepop_clustering_method', type=str, default='default')
 
     parser.add_argument('--run-method', dest='run_method',type=str,default='local')
 
