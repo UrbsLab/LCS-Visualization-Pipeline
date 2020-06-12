@@ -118,54 +118,58 @@ class ClusterTree:
             l.append(b)
         return l
 
-    def getNSignificantClusters(self,N,metric,method,p_value=0.05,sample_count=30):
+    def getNSignificantClusters(self,N,metric,method,p_value=0.05,sample_count=30,random_state=None):
         if self.significant_clusters == None:
-            self.getSignificantClusters(metric,method,p_value,sample_count)
-        else:
-            copy_objs = copy.deepcopy(self.significant_cluster_objs)
-            if N > len(copy_objs):
-                N = len(copy_objs)
+            self.getSignificantClusters(metric,method,p_value,sample_count,random_state=random_state)
 
-            while len(copy_objs) > N:
-                #Find lowest rank cluster that also has a sibling
-                min_rank = np.inf
-                lowest_cluster = None
-                for cluster in copy_objs:
-                    if cluster.height_tracker < min_rank:
-                        #Find sibling, if it exists.
-                        c_index = self.clusters[cluster.sibling_index].sibling_index
-                        potential_sibling_cluster = None
-                        for c in copy_objs:
-                            if c.sibling_index == c_index:
-                                potential_sibling_cluster = cluster
-                        if potential_sibling_cluster != None:
-                            min_rank = cluster.height_tracker
-                            lowest_cluster = cluster
+        copy_objs = copy.deepcopy(self.significant_cluster_objs)
+        if N > len(copy_objs):
+            N = len(copy_objs)
 
-                #Get lowest rank cluster's sibling
-                own_index = self.clusters[lowest_cluster.sibling_index].sibling_index
-                sibling_cluster = None
-                for cluster in copy_objs:
-                    if cluster.sibling_index == own_index:
-                        sibling_cluster = cluster
+        while len(copy_objs) > N:
+            #Find lowest rank cluster that also has a sibling
+            min_rank = np.inf
+            lowest_cluster = None
+            for cluster in copy_objs:
+                if cluster.height_tracker < min_rank:
+                    #Find sibling, if it exists.
+                    c_index = self.clusters[cluster.sibling_index].sibling_index
+                    potential_sibling_cluster = None
+                    for c in copy_objs:
+                        if c.sibling_index == c_index:
+                            potential_sibling_cluster = cluster
+                    if potential_sibling_cluster != None:
+                        min_rank = cluster.height_tracker
+                        lowest_cluster = cluster
 
-                #Find lowest rank cluster's parent
-                parent_cluster = copy.deepcopy(self.clusters[lowest_cluster.parent_index])
+            #Get lowest rank cluster's sibling
+            own_index = self.clusters[lowest_cluster.sibling_index].sibling_index
+            sibling_cluster = None
+            for cluster in copy_objs:
+                if cluster.sibling_index == own_index:
+                    sibling_cluster = cluster
 
-                #Remove siblings from copy. Add parent
-                copy_objs.remove(lowest_cluster)
-                copy_objs.remove(sibling_cluster)
-                copy_objs.append(parent_cluster)
+            #Find lowest rank cluster's parent
+            parent_cluster = copy.deepcopy(self.clusters[lowest_cluster.parent_index])
 
-            #Convert copy into list of lists of labels
-            sig_clusters = []
-            colors = []
-            for c in copy_objs:
-                sig_clusters.append(c.instance_index_array)
-                colors.append(c.hex)
-            return self.indicesToLabels(sig_clusters),colors
+            #Remove siblings from copy. Add parent
+            copy_objs.remove(lowest_cluster)
+            copy_objs.remove(sibling_cluster)
+            copy_objs.append(parent_cluster)
 
-    def getSignificantClusters(self,metric,method,p_value=0.05,sample_count=30):
+        #Convert copy into list of lists of labels
+        sig_clusters = []
+        colors = []
+        for c in copy_objs:
+            sig_clusters.append(c.instance_index_array)
+            colors.append(c.hex)
+        return self.indicesToLabels(sig_clusters),colors
+
+    def getSignificantClusters(self,metric,method,p_value=0.05,sample_count=30,random_state=None):
+        if random_state != None:
+            random.seed(random_state)
+            np.random.seed(random_state)
+
         if self.significant_clusters == None:
             self.significant_clusters = []
             self.significant_cluster_objs = []

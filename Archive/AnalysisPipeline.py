@@ -18,20 +18,20 @@ import csv
 def main(argv):
     # CONTROL PANEL ####################################################################################################
     # Dataset Info
-    datapath = 'Datasets/mp6_full.csv'
+    datapath = 'Datasets/add.txt'
     #datapath = 'Datasets/GAMETES/Files/Core/n2l2b2h2_0_EDM-1_01_hetLabel.txt'
     class_label = 'Class'
-    instance_label = 'Instance'
-    group_label = 'Group'
+    instance_label = None
+    group_label = None
     cv_count = 3
 
     # Experiment Info
     experiment_name = argv[1]
 
     # Training Info
-    learning_iterations = 10000
-    N = 500
-    nu = 10
+    learning_iterations = 20000
+    N = 1000
+    nu = 1
     attribute_tracking_method = 'wh'
     use_expert_knowledge = None
     random_state = None
