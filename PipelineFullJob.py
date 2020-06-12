@@ -42,6 +42,7 @@ def job(experiment_path,cv):
         os.mkdir(experiment_path + '/Full/training')
         os.mkdir(experiment_path + '/Full/visualizations')
         os.mkdir(experiment_path + '/Full/visualizations/rulepop')
+        os.mkdir(experiment_path + '/Full/visualizations/rulepop/ruleclusters')
         os.mkdir(experiment_path + '/Full/visualizations/at')
         os.mkdir(experiment_path + '/Full/visualizations/at/atclusters')
 
@@ -79,18 +80,92 @@ def job(experiment_path,cv):
     plt.savefig(experiment_path + '/Full/visualizations/rulepop/rulepopHeatmap.png')
     plt.close('all')
 
-    # Rule Population Clustermap
+    # Rule Population Clustermaps
     if rulepop_clustering_method == 'spearman':
-        seaborn.clustermap(rule_df, metric=Utilities.spearmanDistance, method='ward', cmap='plasma')
-        plt.savefig(experiment_path + '/Full/visualizations/rulepop/rulepopClusterMapSpearman.png')
+        metric = Utilities.spearmanDistance
     elif rulepop_clustering_method == 'pearson':
-        seaborn.clustermap(rule_df, metric=Utilities.pearsonDistance, method='ward', cmap='plasma')
-        plt.savefig(experiment_path + '/Full/visualizations/rulepop/rulepopClusterMapPearson.png')
+        metric = Utilities.pearsonDistance
     else:
-        # When using this, make sure you have no individual vectors that have all equal values
-        seaborn.clustermap(rule_df, metric='correlation', method='ward', cmap='plasma')
-        plt.savefig(experiment_path + '/Full/visualizations/rulepop/rulepopClusterMapDefault.png')
-    plt.close('all')
+        metric = 'correlation'
+
+    r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
+    rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage,list(range(num_rules)),rule_df.to_numpy())
+    rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05,sample_count=100,metric=metric,method='ward',random_state=random_state)
+    print(len(rule_clusters))
+    for rule_cluster_count in reversed(range(1,len(rule_clusters)+1)):
+        if not os.path.exists(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters'):
+            os.mkdir(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters')
+
+        rule_subclusters, rule_colors = rule_cluster_tree.getNSignificantClusters(rule_cluster_count,p_value=0.05, sample_count=100,metric=metric, method='ward',random_state=random_state)
+        rule_color_dict = {}
+        rule_color_count = 0
+        for cluster in rule_subclusters:
+            random_color = rule_colors[rule_color_count]
+            for inst_label in cluster:
+                rule_color_dict[inst_label] = random_color
+            rule_color_count += 1
+        rule_color_list = pd.Series(dict(sorted(rule_color_dict.items())))
+
+        seaborn.clustermap(rule_df, row_linkage=r.dendrogram_row.linkage, col_linkage=r.dendrogram_col.linkage,row_colors=rule_color_list, cmap='plasma')
+        plt.savefig(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters/ruleClustermap.png',dpi=300)
+        plt.close('all')
+
+        with open(experiment_path + '/Full/visualizations/rulepop/ruleclusters/'+str(rule_cluster_count)+'_clusters/ruleClusters.csv', mode='w') as file:
+            writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for rule_cluster in rule_subclusters:
+                exp_color = rule_color_dict[rule_cluster[0]]
+                writer.writerow(['ClusterID: ' + exp_color])
+                writer.writerow(list(data_headers)+[class_label,'Accuracy','Numerosity','Specificity','Init Timestamp'])
+
+                spec_sum = np.array([0.0] * len(data_headers))
+                acc_spec_sum = np.array([0.0] * len(data_headers))
+                acc_sum = 0
+                numerosity_sum = 0
+                init_ts_sum = 0
+                specificity_sum = 0
+
+                for inst_index in rule_cluster:
+                    rule = model.population.popSet[inst_index]
+                    condition = []
+                    condition_counter = 0
+                    for attr_index in range(len(data_headers)):
+                        if attr_index in rule.specifiedAttList:
+                            condition.append(rule.condition[condition_counter])
+                            spec_sum[attr_index] += 1
+                            acc_spec_sum[attr_index] += rule.accuracy
+                            condition_counter += 1
+                        else:
+                            condition.append('#')
+                    writer.writerow(condition+[rule.phenotype,rule.accuracy,rule.numerosity,len(rule.specifiedAttList)/len(data_headers),rule.initTimeStamp])
+
+                    acc_sum += rule.accuracy*rule.numerosity
+                    numerosity_sum += rule.numerosity
+                    init_ts_sum += rule.initTimeStamp*rule.numerosity
+                    specificity_sum += len(rule.specifiedAttList)/len(data_headers)*rule.numerosity
+
+                writer.writerow(['Rule Specificity Sums'])
+                ks = []
+                vs = []
+                for k, v in sorted(dict(zip(list(data_headers), list(spec_sum))).items(), key=lambda item: item[1]):
+                    ks.append(k)
+                    vs.append(v)
+                writer.writerow(list(reversed(ks)))
+                writer.writerow(list(reversed(vs)))
+
+                writer.writerow(['Rule Accuracy Weighted Specificity Sums'])
+                ks = []
+                vs = []
+                for k, v in sorted(dict(zip(list(data_headers), list(acc_spec_sum))).items(), key=lambda item: item[1]):
+                    ks.append(k)
+                    vs.append(v)
+                writer.writerow(list(reversed(ks)))
+                writer.writerow(list(reversed(vs)))
+
+                writer.writerow(['Avg Accuracy','Avg Init Timestamp','Avg Specificity'])
+                writer.writerow([acc_sum/numerosity_sum,init_ts_sum/numerosity_sum,specificity_sum/numerosity_sum])
+
+                writer.writerow([])
+        file.close()
 
     # Rule Specificity Network#######################################################################################
     attribute_acc_specificity_counts = model.get_final_attribute_specificity_list()

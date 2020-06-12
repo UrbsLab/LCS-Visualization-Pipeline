@@ -14,7 +14,7 @@ import PipelineFullJob
 '''
 Sample Run Commands:
 #MP6 problem
-python PipelineMain.py --d Datasets/mp6_full.csv --o Outputs --e mp6test --inst Instance --group Group --iter 10000 --N 500 --nu 10
+python PipelineMain.py --d Datasets/mp6_full.csv --o Outputs --e mp6ruletest --inst Instance --group Group --iter 10000 --N 500 --nu 10
 
 #1 Locus 2 Model Heterogeneity
 python PipelineMain.py --d Datasets/one.txt --o Outputs --e oneLocHetero --group Model --iter 20000 --N 1000 --nu 1

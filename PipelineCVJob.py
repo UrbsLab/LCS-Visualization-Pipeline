@@ -250,6 +250,7 @@ def job(experiment_path,cv):
 
                         if test_data_phenotypes[exp_index] == test_predictions[exp_index]:
                             testing_accuracy += 1
+
                         at_sums += normalized_test_AT_scores[exp_index]
                         if exp_testgroup in group_makeup:
                             group_makeup[exp_testgroup] += 1 / total_size
@@ -359,7 +360,7 @@ def job(experiment_path,cv):
                     writer.writerow(list(reversed(vs)))
 
                 writer.writerow([])
-
+        file.close()
     os.remove(experiment_path + '/pickledCV_' + str(cv))
 
 def get_closest_cluster_color(cluster_labels,cluster_instances,train_instances,test_instance,color_dict):
