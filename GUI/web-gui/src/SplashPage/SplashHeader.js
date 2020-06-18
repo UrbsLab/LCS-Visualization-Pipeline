@@ -2,15 +2,6 @@ import React from "react";
 import { AppBar, Toolbar, Typography, Button, Grid } from "@material-ui/core";
 
 class Header extends React.Component {
-  handleClick(event) {
-    const { name } = event.currentTarget;
-    if (name === "sign-in") {
-      console.log("sign in");
-    } else if (name === "register") {
-      console.log("register");
-    }
-  }
-
   render() {
     const buttonStyle = {
       paddingRight: 15,
@@ -33,7 +24,7 @@ class Header extends React.Component {
                 color="primary"
                 variant="contained"
                 style={buttonStyle}
-                onClick={this.handleClick}
+                onClick={this.props.clickHandler}
                 name="sign-in"
               >
                 Sign In
@@ -44,7 +35,7 @@ class Header extends React.Component {
                 color="primary"
                 variant="contained"
                 style={buttonStyle}
-                onClick={this.handleClick}
+                onClick={this.props.clickHandler}
                 name="register"
               >
                 Register
