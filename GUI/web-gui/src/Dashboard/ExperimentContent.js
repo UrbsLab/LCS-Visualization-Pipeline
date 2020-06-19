@@ -82,8 +82,13 @@ class ExperimentContent extends React.Component {
           />
         </div>
 
-        <Dialog open={this.state.imageExpanded} onClose={this.imageClickOff}>
-          <DialogContent style={{ width: "80vh", height: "80vh" }}>
+        <Dialog
+          open={this.state.imageExpanded}
+          onClose={this.imageClickOff}
+          fullWidth={true}
+          maxWidth={"80vh"}
+        >
+          <DialogContent>
             <img
               src={imgsrc}
               alt="Failed to Load"
