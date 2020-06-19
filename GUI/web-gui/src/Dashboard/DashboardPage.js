@@ -91,7 +91,12 @@ class DashboardPage extends React.Component {
               </Grid>
             </Grid>
             <Grid item xs={9}>
-              <ExperimentContent name={this.state.selectedExperiment} />
+              {this.state.selectedExperiment !== null ? (
+                <ExperimentContent
+                  name={this.state.selectedExperiment}
+                  data={this.state.userdata.resultdata}
+                />
+              ) : null}
             </Grid>
           </Grid>
         </Grid>
