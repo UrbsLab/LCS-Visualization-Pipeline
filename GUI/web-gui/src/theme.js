@@ -27,6 +27,15 @@ const theme = createMuiTheme({
     subtitle1: {
       fontFamily: "Gill Sans",
     },
+    subtitle2: {
+      fontFamily: "Gill Sans",
+    },
+    caption: {
+      fontFamily: "Gill Sans",
+    },
+    button: {
+      fontFamily: "Gill Sans",
+    },
   },
 });
 
