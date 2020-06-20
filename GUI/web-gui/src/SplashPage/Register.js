@@ -17,10 +17,10 @@ class RegisterDialog extends React.Component {
         onClose={this.props.close}
         aria-labelledby="form-dialog-title"
       >
-        <DialogTitle id="form-dialog-title">Register for Theseus</DialogTitle>
+        <DialogTitle id="form-dialog-title">Register for Apollo</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Get started with your Theseus Dashboard here
+            Get started with your Apollo Dashboard here
           </DialogContentText>
           <TextField
             autoFocus

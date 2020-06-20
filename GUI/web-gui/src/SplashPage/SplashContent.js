@@ -9,7 +9,7 @@ function SplashPage() {
     <Grid container justify="center">
       <Grid item>
         <Typography variant="h3" align="center" style={titleStyles}>
-          Find signal in your data with Theseus
+          Find signal in your data with Apollo Analytics
         </Typography>
       </Grid>
     </Grid>

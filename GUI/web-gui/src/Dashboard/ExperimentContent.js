@@ -1,5 +1,12 @@
 import React from "react";
-import { Typography, Slider, Dialog, DialogContent } from "@material-ui/core";
+import {
+  Typography,
+  Slider,
+  Dialog,
+  DialogContent,
+  Button,
+  ButtonGroup,
+} from "@material-ui/core";
 
 class ExperimentContent extends React.Component {
   constructor() {
@@ -12,6 +19,7 @@ class ExperimentContent extends React.Component {
     this.handleSlider = this.handleSlider.bind(this);
     this.imageClick = this.imageClick.bind(this);
     this.imageClickOff = this.imageClickOff.bind(this);
+    this.clickTopToggle = this.clickTopToggle.bind(this);
   }
 
   handleSlider(event, newValue) {
@@ -26,6 +34,20 @@ class ExperimentContent extends React.Component {
     this.setState({ imageExpanded: false });
   }
 
+  clickTopToggle(event) {
+    const name = event.currentTarget.getAttribute("name");
+    this.setState({ screen: name });
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (
+      prevProps.name !== this.props.name ||
+      prevState.screen !== this.state.screen
+    ) {
+      this.setState({ clusterCount: 1 });
+    }
+  }
+
   render() {
     let imgsrc;
     if (this.state.screen === "at") {
@@ -35,6 +57,13 @@ class ExperimentContent extends React.Component {
         "/Full/visualizations/at/atclusters/" +
         this.state.clusterCount.toString() +
         "_clusters/ATclustermap.png";
+    } else {
+      imgsrc =
+        "FakeFiles/" +
+        this.props.name +
+        "/Full/visualizations/rulepop/ruleclusters/" +
+        this.state.clusterCount.toString() +
+        "_clusters/ruleclustermap.png";
     }
 
     let clusterNum;
@@ -54,6 +83,25 @@ class ExperimentContent extends React.Component {
           {this.props.name}
         </Typography>
 
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <ButtonGroup color="primary">
+            <Button
+              variant={this.state.screen === "at" ? "contained" : "outlined"}
+              name="at"
+              onClick={this.clickTopToggle}
+            >
+              Attribute Tracking
+            </Button>
+            <Button
+              variant={this.state.screen === "at" ? "outlined" : "contained"}
+              name="rule"
+              onClick={this.clickTopToggle}
+            >
+              Rule Population
+            </Button>
+          </ButtonGroup>
+        </div>
+
         <img
           src={imgsrc}
           alt="Failed to Load"
@@ -67,8 +115,16 @@ class ExperimentContent extends React.Component {
           onClick={this.imageClick}
         />
 
-        <div align="center">
-          <Typography variant="subtitle1">Number of Clusters</Typography>
+        <div align="center" style={{ marginTop: 30 }}>
+          {this.state.screen === "at" ? (
+            <Typography variant="subtitle1">
+              Number of Attribute Tracking Clusters
+            </Typography>
+          ) : (
+            <Typography variant="subtitle1">
+              Number of Rule Population Clusters
+            </Typography>
+          )}
           <Slider
             value={this.state.clusterCount}
             defaultValue={1}
@@ -82,11 +138,26 @@ class ExperimentContent extends React.Component {
           />
         </div>
 
+        <div style={{ margin: "auto", textAlign: "center" }}>
+          <Button color="primary" variant="outlined" style={{ margin: 10 }}>
+            Download Cluster Analysis
+          </Button>
+          {this.state.screen === "at" ? (
+            <Button color="primary" variant="outlined" style={{ margin: 10 }}>
+              Download Cluster-Labelled Dataset
+            </Button>
+          ) : (
+            <Button color="primary" variant="outlined" style={{ margin: 10 }}>
+              Download Rule Co-Specificity Network
+            </Button>
+          )}
+        </div>
+
         <Dialog
           open={this.state.imageExpanded}
           onClose={this.imageClickOff}
           fullWidth={true}
-          maxWidth={"80vh"}
+          maxWidth={"xl"}
         >
           <DialogContent>
             <img

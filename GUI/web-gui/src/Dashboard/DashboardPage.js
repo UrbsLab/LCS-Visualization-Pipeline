@@ -28,8 +28,12 @@ class DashboardPage extends React.Component {
   }
 
   handleExperimentClick(event) {
-    const name = event.currentTarget.getAttribute("name");
-    this.setState({ selectedExperiment: name });
+    const nameT = event.currentTarget.getAttribute("name");
+    const trained = nameT.charAt(0);
+    const name = nameT.substr(1);
+    if (trained === "t") {
+      this.setState({ selectedExperiment: name });
+    }
   }
 
   handleAddExperimentButtonClick(event) {

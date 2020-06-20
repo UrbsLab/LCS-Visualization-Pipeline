@@ -6,6 +6,7 @@ import {
   ListItemIcon,
   Divider,
   Typography,
+  CircularProgress,
 } from "@material-ui/core";
 import { withStyles } from "@material-ui/core/styles";
 import { LibraryBooksRounded } from "@material-ui/icons";
@@ -38,7 +39,7 @@ class ExperimentList extends React.Component {
                 ? this.props.classes.selected
                 : this.props.classes.deselected
             }
-            name={tile.experimentName}
+            name={(tile.trained ? "t" : "f") + tile.experimentName}
           >
             <ExperimentTile
               name={tile.experimentName}
@@ -91,7 +92,7 @@ function timeConverter(UNIX_timestamp) {
 function ExperimentTile(props) {
   const colorPick = props.selected ? "white" : "black";
   const subheading =
-    (props.trained ? "Trained" : "Training... ") +
+    (props.trained ? "Trained" : "Still Training... ") +
     " | Created " +
     timeConverter(props.created);
   return (
@@ -104,7 +105,13 @@ function ExperimentTile(props) {
       }}
     >
       <ListItemIcon>
-        <LibraryBooksRounded style={{ color: colorPick }} />
+        {props.trained ? (
+          <LibraryBooksRounded style={{ color: colorPick }} />
+        ) : (
+          <CircularProgress
+            style={{ color: colorPick, width: "50%", height: "50%" }}
+          />
+        )}
       </ListItemIcon>
       <ListItemText
         primary={

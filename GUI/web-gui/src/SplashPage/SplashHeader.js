@@ -15,7 +15,7 @@ class Header extends React.Component {
         <Toolbar>
           <Grid container justify="flex-start">
             <Grid item>
-              <Typography variant="h4">Theseus</Typography>
+              <Typography variant="h4">Apollo</Typography>
             </Grid>
           </Grid>
           <Grid container justify="flex-end" spacing={2}>

@@ -22,7 +22,7 @@ class SignInDialog extends React.Component {
         aria-labelledby="form-dialog-title"
       >
         <DialogTitle id="form-dialog-title">
-          Sign in to your Theseus Dashboard
+          Sign in to your Apollo Dashboard
         </DialogTitle>
         <DialogContent>
           <TextField

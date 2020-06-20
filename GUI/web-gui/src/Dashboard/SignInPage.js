@@ -64,7 +64,7 @@ class SignInPage extends React.Component {
                 align="center"
                 style={{ marginBottom: 20 }}
               >
-                Theseus Dashboard
+                Apollo Dashboard
               </Typography>
               <Button
                 variant="outlined"
