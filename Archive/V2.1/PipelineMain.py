@@ -18,6 +18,8 @@ python PipelineMain.py --d Datasets/mp6_full.csv --o Outputs --e mp6ruletest --i
 
 #1 Locus 2 Model Heterogeneity
 python PipelineMain.py --d Datasets/one.txt --o Outputs --e ruleOne --group Model --iter 20000 --N 1000 --nu 1
+
+python PipelineMain.py --d Datasets/junechoptransformed.csv --o Outputs --e chopjunetransformed --class IsDrivingPassing --inst customer_deidentified --iter 50000 --N 2000 --nu 1
 '''
 
 def main(argv):

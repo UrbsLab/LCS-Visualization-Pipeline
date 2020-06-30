@@ -89,7 +89,9 @@ def job(experiment_path,cv):
 
     #Get AT training clusters
     AT_full_df = pd.DataFrame(normalized_AT_scores, columns=data_headers, index=train_instance_labels)
-    g = seaborn.clustermap(AT_full_df, metric=Utilities.pearsonDistance, method='ward', cmap='plasma')
+    g = seaborn.clustermap(AT_full_df, metric='correlation', method='ward', cmap='plasma')
+    print('clustermap done')
+    #g = seaborn.clustermap(AT_full_df, metric=Utilities.pearsonDistance, method='ward', cmap='plasma')
     cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, train_instance_labels, AT_full_df.to_numpy())
     clusters, colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward',random_state=random_state)
 
