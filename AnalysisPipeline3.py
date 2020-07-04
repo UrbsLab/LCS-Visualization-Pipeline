@@ -108,8 +108,12 @@ def main(argv):
     # Read in data
     if data_path[-1] == 't':  # txt
         dataset = pd.read_csv(data_path, sep='\t')
-    else:  # csv
+    elif data_path[-1] == 'v':  # csv
         dataset = pd.read_csv(data_path, sep=',')
+    elif data_path[-1] == 'z':  # txt.gz
+        dataset = pd.read_csv(data_path, sep='\t', compression='gzip')
+    else:
+        raise Exception('Unrecognized File Type')
 
     # Random seed
     random.seed(random_state)
@@ -119,10 +123,12 @@ def main(argv):
     dataset = dataset.loc[:, ~dataset.columns.str.contains('^Unnamed')]
 
     # Add Instance and Group Label Columns if necessary
+    visualize_true_clusters = True
     if instance_label == None:
         dataset = dataset.assign(instance=np.array(list(range(dataset.values.shape[0]))))
     if group_label == None:
         dataset = dataset.assign(group=np.ones(dataset.values.shape[0]))
+        visualize_true_clusters = False
 
     train_dfs, test_dfs = cv_partitioner(dataset, cv_count, class_label, random_state)
     ####################################################################################################################
@@ -383,8 +389,12 @@ def main(argv):
                 group_color_dict[inst_label] = random_color
         group_list = pd.Series(dict(sorted(group_color_dict.items())))
 
-        combo_list = pd.concat([group_list, color_list], axis=1)
-        combo_list.columns = ['True Clusters','Found Clusters']
+        if visualize_true_clusters:
+            combo_list = pd.concat([group_list, color_list], axis=1)
+            combo_list.columns = ['True Clusters','Found Clusters']
+        else:
+            combo_list = pd.Series.to_frame(color_list)
+            combo_list.columns = ['Found Clusters']
 
         g = seaborn.clustermap(AT_full_df, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage,row_colors=combo_list, cmap='plasma')
         plt.savefig(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters/ATclustermap.png',dpi=300)
