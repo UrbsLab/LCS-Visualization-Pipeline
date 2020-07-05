@@ -17,6 +17,7 @@ import HClust
 import networkx as nx
 import matplotlib.pyplot as plt
 from statistics import mean
+from scipy.spatial.distance import cdist
 
 '''
 Sample Run Commands:
@@ -363,11 +364,25 @@ def main(argv):
     cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, full_instance_labels, AT_full_df.to_numpy())
     clusters, colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward', random_state=random_state)
 
+    AT_distortions = []
+
     for cluster_count in reversed(range(1, len(clusters) + 1)):
         if not os.path.exists(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters'):
             os.mkdir(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters')
 
         subclusters, colors = cluster_tree.getNSignificantClusters(cluster_count, p_value=0.05, sample_count=100, metric='correlation', method='ward',random_state=random_state)
+
+        # Elbow Method
+        centroids = []
+        for cluster in subclusters:
+            centroid = np.zeros(len(data_headers))
+            for inst_label in cluster:
+                index = full_instance_labels.index(inst_label)
+                centroid += merged_AT[index]
+            centroid /= len(cluster)
+            centroids.append(centroid)
+        centroids = np.array(centroids)
+        AT_distortions.append(sum(np.min(cdist(merged_AT,centroids,'euclidean'),axis=1)))
 
         # Clustermaps
         color_dict = {}
@@ -476,6 +491,16 @@ def main(argv):
 
                 writer.writerow([])
         file.close()
+
+    #Plot AT Elbow Plot
+    AT_distortions.reverse()
+    plt.plot(range(1, len(clusters) + 1),AT_distortions,'bx-')
+    plt.xlabel('Number of Clusters')
+    plt.ylabel('Distortion')
+    plt.title('The Elbow Method using Distortion')
+    plt.savefig(experiment_path + '/Composite/at/'+str(find_elbow(AT_distortions))+'optimalClusters.png', dpi=300)
+    plt.close('all')
+
     ####################################################################################################################
     # Merge Rule Population
     merged_population = []
@@ -526,6 +551,7 @@ def main(argv):
             micro_to_macro_rule_index_map[micro_rule_index_count] = macro_rule_index_count
             micro_rule_index_count += 1
         macro_rule_index_count += 1
+    rule_specificity_array = np.array(rule_specificity_array)
 
     rule_df = pd.DataFrame(rule_specificity_array, columns=data_headers, index=list(range(micro_rule_index_count)))
 
@@ -558,11 +584,25 @@ def main(argv):
     else:
         rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric=metric, method='ward',random_state=random_state)
 
+    rule_distortions = []
     for rule_cluster_count in reversed(range(1, len(rule_clusters) + 1)):
         if not os.path.exists(experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters'):
             os.mkdir(experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters')
 
         rule_subclusters, rule_colors = rule_cluster_tree.getNSignificantClusters(rule_cluster_count, p_value=0.05,sample_count=100, metric=metric,method='ward',random_state=random_state)
+
+        # Elbow Method
+        centroids = []
+        for cluster in rule_subclusters:
+            centroid = np.zeros(len(data_headers))
+            for inst_label_index in cluster:
+                centroid += rule_specificity_array[inst_label_index]
+            centroid /= len(cluster)
+            centroids.append(centroid)
+        centroids = np.array(centroids)
+        rule_distortions.append(sum(np.min(cdist(rule_specificity_array, centroids, 'euclidean'), axis=1)))
+
+        # Clustermaps
         rule_color_dict = {}
         rule_color_count = 0
         for cluster in rule_subclusters:
@@ -688,6 +728,15 @@ def main(argv):
     plt.axis('off')
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopGraph.png', dpi=300)
     plt.close('all')
+
+    # Plot Rule Elbow Plot
+    rule_distortions.reverse()
+    plt.plot(range(1, len(rule_clusters) + 1), rule_distortions, 'bx-')
+    plt.xlabel('Number of Clusters')
+    plt.ylabel('Distortion')
+    plt.title('The Elbow Method using Distortion')
+    plt.savefig(experiment_path + '/Composite/rulepop/'+str(find_elbow(rule_distortions))+'optimalClusters.png', dpi=300)
+    plt.close('all')
     ####################################################################################################################
 
 def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed):
@@ -767,6 +816,28 @@ def pearsonDistance(u,v):
     elif len(set(u)) == 1 or len(set(v)) == 1:
         return euclidean(u, v) / math.sqrt(len(v))  # normalized euclidean distance
     return 1 - pearsonr(u,v)[0]
+
+def find_elbow(data_list): #data is a list of y axis numbers. Assume x is 1 to len(data)
+    '''
+    Inspired by: https://datascience.stackexchange.com/questions/57122/in-elbow-curve-how-to-find-the-point-from-where-the-curve-starts-to-rise
+    '''
+
+    data = np.array(list(zip(range(1,len(data_list)+1),data_list)))
+    theta = get_data_theta(data)
+
+    # make rotation matrix
+    co = np.cos(theta)
+    si = np.sin(theta)
+    rotation_matrix = np.array(((co, si), (-si, co)))
+
+    # rotate data vector
+    rotated_vector = data.dot(rotation_matrix)
+
+    # return x value of elbow
+    return np.where(rotated_vector[:,1] == rotated_vector[:,1].min())[0][0] + 1 #+1 transforms index to actual x value
+
+def get_data_theta(data): #in radians
+    return np.arctan2(abs(data[:, 1].max() - data[:, 1].min()), abs(data[:, 0].max() - data[:, 0].min()))
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
