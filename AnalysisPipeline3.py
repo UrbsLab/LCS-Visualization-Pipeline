@@ -31,6 +31,10 @@ python AnalysisPipeline3.py --d Datasets/mp20_full.csv --o Outputs --e mp20v3 --
 
 #rule 1
 python AnalysisPipeline3.py --d Datasets/one.txt --o Outputs --e onev3 --group Model --iter 20000 --N 1000 --nu 1
+
+python AnalysisPipeline3.py --d Datasets/Simulated/Singles/3_HeteroBalanced.txt --o Outputs --e heteroBalanced --group Model
+python AnalysisPipeline3.py --d Datasets/Simulated/Singles/4_HeteroImbalanced.txt --o Outputs --e heteroImbalanced40k --group Model --iter 40000
+
 '''
 
 def main(argv):
@@ -110,7 +114,7 @@ def main(argv):
         dataset = pd.read_csv(data_path, sep='\t')
     elif data_path[-1] == 'v':  # csv
         dataset = pd.read_csv(data_path, sep=',')
-    elif data_path[-1] == 'z':  # txt.gz
+    elif data_path[-1] == 'z':  # .txt.gz
         dataset = pd.read_csv(data_path, sep='\t', compression='gzip')
     else:
         raise Exception('Unrecognized File Type')
@@ -498,7 +502,7 @@ def main(argv):
 
     for rule in merged_population:
         if isinstance(rule.numerosity,list):
-            rule.numerosity = int(mean(rule.numerosity))
+            rule.numerosity = int(sum(rule.numerosity))
             rule.accuracy = mean(rule.accuracy)
             rule.initTimeStamp = int(mean(rule.initTimeStamp))
 
@@ -508,15 +512,22 @@ def main(argv):
         a = []
         for attribute in range(len(data_headers)):
             a.append(0)
-        rule_specificity_array.append(a)
+        rule = merged_population[inst]
+        for microclassifier in range(rule.numerosity):
+            rule_specificity_array.append(a)
 
-    rule_index_count = 0
+    micro_to_macro_rule_index_map = {}
+    micro_rule_index_count = 0
+    macro_rule_index_count = 0
     for classifier in merged_population:
-        for i in classifier.specifiedAttList:
-            rule_specificity_array[rule_index_count][i] = 1
-        rule_index_count += 1
+        for microclassifier in range(classifier.numerosity):
+            for i in classifier.specifiedAttList:
+                rule_specificity_array[micro_rule_index_count][i] = 1
+            micro_to_macro_rule_index_map[micro_rule_index_count] = macro_rule_index_count
+            micro_rule_index_count += 1
+        macro_rule_index_count += 1
 
-    rule_df = pd.DataFrame(rule_specificity_array, columns=data_headers, index=list(range(num_rules)))
+    rule_df = pd.DataFrame(rule_specificity_array, columns=data_headers, index=list(range(micro_rule_index_count)))
 
     seaborn.heatmap(rule_df, cmap='plasma')
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopHeatmap.png')
@@ -537,7 +548,7 @@ def main(argv):
             r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
     else:
         r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
-    rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(num_rules)), rule_df.to_numpy())
+    rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(micro_rule_index_count)), rule_df.to_numpy())
 
     if rulepop_clustering_method == 'pearson':
         try:
@@ -581,24 +592,28 @@ def main(argv):
                 init_ts_sum = 0
                 specificity_sum = 0
 
+                covered_macro_rule_indices = []
                 for inst_index in rule_cluster:
-                    rule = merged_population[inst_index]
-                    condition = []
-                    condition_counter = 0
-                    for attr_index in range(len(data_headers)):
-                        if attr_index in rule.specifiedAttList:
-                            condition.append(rule.condition[condition_counter])
-                            spec_sum[attr_index] += 1
-                            acc_spec_sum[attr_index] += rule.accuracy
-                            condition_counter += 1
-                        else:
-                            condition.append('#')
-                    writer.writerow(condition + [rule.phenotype, rule.accuracy, rule.numerosity,len(rule.specifiedAttList) / len(data_headers), rule.initTimeStamp])
+                    macro_rule_index = micro_to_macro_rule_index_map[inst_index]
+                    if not macro_rule_index in covered_macro_rule_indices:
+                        covered_macro_rule_indices.append(macro_rule_index)
+                        rule = merged_population[macro_rule_index]
+                        condition = []
+                        condition_counter = 0
+                        for attr_index in range(len(data_headers)):
+                            if attr_index in rule.specifiedAttList:
+                                condition.append(rule.condition[condition_counter])
+                                spec_sum[attr_index] += 1
+                                acc_spec_sum[attr_index] += rule.accuracy
+                                condition_counter += 1
+                            else:
+                                condition.append('#')
+                        writer.writerow(condition + [rule.phenotype, rule.accuracy, rule.numerosity,len(rule.specifiedAttList) / len(data_headers), rule.initTimeStamp])
 
-                    acc_sum += rule.accuracy * rule.numerosity
-                    numerosity_sum += rule.numerosity
-                    init_ts_sum += rule.initTimeStamp * rule.numerosity
-                    specificity_sum += len(rule.specifiedAttList) / len(data_headers) * rule.numerosity
+                        acc_sum += rule.accuracy * rule.numerosity
+                        numerosity_sum += rule.numerosity
+                        init_ts_sum += rule.initTimeStamp * rule.numerosity
+                        specificity_sum += len(rule.specifiedAttList) / len(data_headers) * rule.numerosity
 
                 writer.writerow(['Rule Specificity Sums'])
                 ks = []
@@ -661,11 +676,11 @@ def main(argv):
 
     max_node_value = max(acc_spec_dict.values())
     for i in acc_spec_dict:
-        acc_spec_dict[i] = acc_spec_dict[i] / max_node_value * 1000
+        acc_spec_dict[i] = math.pow(acc_spec_dict[i] / max_node_value,3) * 1000 #Cubic Node Size Function
 
     max_weight_value = max(weight_list)
     for i in range(len(weight_list)):
-        weight_list[i] = weight_list[i] / max_weight_value * 10
+        weight_list[i] = math.pow(weight_list[i] / max_weight_value,3) * 10 #Cubic Weight Function
 
     nx.draw_networkx_nodes(G, pos, nodelist=acc_spec_dict.keys(), node_size=[v * 1 for v in acc_spec_dict.values()],node_color='#FF3377')
     nx.draw_networkx_edges(G, pos, edge_color='#E0B8FF', edgelist=edge_list, width=[v * 1 for v in weight_list])
