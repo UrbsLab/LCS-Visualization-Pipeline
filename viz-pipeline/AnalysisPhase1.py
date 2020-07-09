@@ -200,7 +200,7 @@ def main(argv):
     pickle.dump(phase1_pickle, outfile)
     outfile.close()
 
-    for cv in cv_count:
+    for cv in range(cv_count):
         if do_cluster == 1:
             submitClusterJob(cv,experiment_path)
         else:
