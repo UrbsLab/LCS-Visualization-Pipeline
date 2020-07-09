@@ -22,20 +22,13 @@ from scipy.spatial.distance import cdist
 '''
 Sample Run Commands:
 #MP6 problem
-python AnalysisPipeline3.py --d Datasets/mp6_full.csv --o Outputs --e mp6v3 --inst Instance --group Group --iter 10000 --N 500 --nu 10
+python AnalysisPipeline3.py --d Datasets/mp6_full.csv --o Outputs --e mp6v3 --inst Instance --group Group --iter 20000 --N 500 --nu 10
 
 #MP11 problem
-python AnalysisPipeline3.py --d Datasets/mp11_full.csv --o Outputs --e mp11v3 --inst Instance --group Group --iter 10000 --N 1000 --nu 10
+python AnalysisPipeline3.py --d Datasets/mp11_full.csv --o Outputs --e mp11v3 --inst Instance --group Group --iter 20000 --N 1000 --nu 10
 
 #MP20 problem
-python AnalysisPipeline3.py --d Datasets/mp20_full.csv --o Outputs --e mp20v3 --inst Instance --group Group --iter 30000 --N 2000 --nu 10
-
-#rule 1
-python AnalysisPipeline3.py --d Datasets/one.txt --o Outputs --e onev3 --group Model --iter 20000 --N 1000 --nu 1
-
-python AnalysisPipeline3.py --d Datasets/Simulated/Singles/3_HeteroBalanced.txt --o Outputs --e heteroBalanced --group Model
-python AnalysisPipeline3.py --d Datasets/Simulated/Singles/4_HeteroImbalanced.txt --o Outputs --e heteroImbalanced40k --group Model --iter 40000
-
+python AnalysisPipeline3.py --d Datasets/mp20_full.csv --o Outputs --e mp20v3 --inst Instance --group Group --iter 100000 --N 2000 --nu 10
 '''
 
 def main(argv):
@@ -58,6 +51,9 @@ def main(argv):
     parser.add_argument('--random-state',dest='random_state',type=str,default='None')
 
     parser.add_argument('--rulepop-method', dest='rulepop_clustering_method', type=str, default='pearson')
+    parser.add_argument('--rheight', dest='rule_height_factor', type=float, default=1)
+    parser.add_argument('--aheight', dest='at_height_factor', type=float, default=1)
+    parser.add_argument('--nspace', dest='network_space_factor', type=float, default=1)
 
     options = parser.parse_args(argv[1:])
     data_path = options.data_path
@@ -85,6 +81,9 @@ def main(argv):
     else:
         random_state = options.random_state
     rulepop_clustering_method = options.rulepop_clustering_method
+    rule_height_factor = options.rule_height_factor
+    at_height_factor = options.at_height_factor
+    network_space_factor = options.network_space_factor
 
     # Create experiment folders and check path validity
     if not os.path.exists(data_path):
@@ -108,6 +107,10 @@ def main(argv):
     outfile.write('nu: ' + str(nu) + '\n')
     outfile.write('attribute_tracking_method: ' + str(attribute_tracking_method) + '\n')
     outfile.write('rulepop_clustering_method: ' + str(rulepop_clustering_method) + '\n')
+    outfile.write('random_state: ' + str(random_state) + '\n')
+    outfile.write('rule population heatmap height to width ratio: ' + str(rule_height_factor) + '\n')
+    outfile.write('AT heatmap height to width ratio: ' + str(at_height_factor) + '\n')
+    outfile.write('Network Space Factor: ' + str(network_space_factor) + '\n')
     outfile.close()
 
     # Read in data
@@ -295,7 +298,7 @@ def main(argv):
             print('AT Clustermap default pearson failed. Trying slower own Pearson method instead')
             g = seaborn.clustermap(AT_full_df_cv, metric=pearsonDistance, method='ward', cmap='plasma')
 
-        g = seaborn.clustermap(AT_full_df_cv, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage, cmap='plasma')
+        g = seaborn.clustermap(AT_full_df_cv, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage, cmap='plasma',figsize=(10/math.sqrt(at_height_factor),10*math.sqrt(at_height_factor)))
         plt.savefig(experiment_path + '/CV_' + str(cv) + '/ATclustermap.png',dpi=300)
         plt.close('all')
 
@@ -330,6 +333,7 @@ def main(argv):
     merged_AT = np.array(merged_AT)
     AT_full_df = pd.DataFrame(merged_AT, columns=data_headers, index=full_instance_labels)
 
+    plt.figure(figsize=((10 / math.sqrt(at_height_factor), 10 * math.sqrt(at_height_factor))))
     seaborn.heatmap(AT_full_df, cmap='plasma')
     plt.savefig(experiment_path + '/Composite/at/ATHeatmap.png')
     plt.close('all')
@@ -415,7 +419,7 @@ def main(argv):
             combo_list = pd.Series.to_frame(color_list)
             combo_list.columns = ['Found Clusters']
 
-        g = seaborn.clustermap(AT_full_df, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage,row_colors=combo_list, cmap='plasma')
+        g = seaborn.clustermap(AT_full_df, row_linkage=g.dendrogram_row.linkage, col_linkage=g.dendrogram_col.linkage,row_colors=combo_list, cmap='plasma',figsize=(10/math.sqrt(at_height_factor),10*math.sqrt(at_height_factor)))
         plt.savefig(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters/ATclustermap.png',dpi=300)
         plt.close('all')
 
@@ -555,6 +559,7 @@ def main(argv):
 
     rule_df = pd.DataFrame(rule_specificity_array, columns=data_headers, index=list(range(micro_rule_index_count)))
 
+    plt.figure(figsize=((10 / math.sqrt(rule_height_factor), 10 * math.sqrt(rule_height_factor))))
     seaborn.heatmap(rule_df, cmap='plasma')
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopHeatmap.png')
     plt.close('all')
@@ -614,7 +619,7 @@ def main(argv):
         rule_color_list = pd.Series.to_frame(rule_color_list)
         rule_color_list.columns = ['Found Clusters']
 
-        seaborn.clustermap(rule_df, row_linkage=r.dendrogram_row.linkage, col_linkage=r.dendrogram_col.linkage,row_colors=rule_color_list, cmap='plasma')
+        seaborn.clustermap(rule_df, row_linkage=r.dendrogram_row.linkage, col_linkage=r.dendrogram_col.linkage,row_colors=rule_color_list, cmap='plasma',figsize=(10/math.sqrt(rule_height_factor),10*math.sqrt(rule_height_factor)))
         plt.savefig(experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters/ruleClustermap.png', dpi=300)
         plt.close('all')
 
@@ -712,7 +717,7 @@ def main(argv):
         edge_list.append((co[0], co[1]))
         weight_list.append(co[3])
 
-    pos = nx.spring_layout(G, k=1)
+    pos = nx.spring_layout(G, k=1, scale=network_space_factor)
 
     max_node_value = max(acc_spec_dict.values())
     for i in acc_spec_dict:
@@ -722,9 +727,9 @@ def main(argv):
     for i in range(len(weight_list)):
         weight_list[i] = math.pow(weight_list[i] / max_weight_value,3) * 10 #Cubic Weight Function
 
-    nx.draw_networkx_nodes(G, pos, nodelist=acc_spec_dict.keys(), node_size=[v * 1 for v in acc_spec_dict.values()],node_color='#FF3377')
-    nx.draw_networkx_edges(G, pos, edge_color='#E0B8FF', edgelist=edge_list, width=[v * 1 for v in weight_list])
-    nx.draw_networkx_labels(G, pos)
+    nx.draw_networkx_nodes(G, pos=pos, nodelist=acc_spec_dict.keys(), node_size=[v * 1 for v in acc_spec_dict.values()],node_color='#FF3377')
+    nx.draw_networkx_edges(G, pos=pos, edge_color='#E0B8FF', edgelist=edge_list, width=[v * 1 for v in weight_list])
+    nx.draw_networkx_labels(G, pos=pos)
     plt.axis('off')
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopGraph.png', dpi=300)
     plt.close('all')
