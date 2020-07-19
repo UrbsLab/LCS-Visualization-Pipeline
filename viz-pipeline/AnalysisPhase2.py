@@ -12,13 +12,16 @@ import pickle
 
 '''Sample Run Code
 #MP6 problem
-python AnalysisPhase2.py --o Outputs --e mp6v3
+python AnalysisPhase2.py --o Outputs --e mp6v3 --cluster 0
 
 #MP11 problem
 python AnalysisPhase2.py --o Outputs --e mp11v3
 
 #MP20 problem
 python AnalysisPhase2.py --o Outputs --e mp20v3
+
+#CHOP Dataset
+python AnalysisPhase2.py --o /home/robertzh/visualizations/vizoutputs --e choptest1
 '''
 
 def main(argv):
@@ -106,6 +109,11 @@ def main(argv):
 
     pos = nx.spring_layout(G, k=1, scale=network_space_factor)
 
+    to_save = [acc_spec_dict,edge_list,weight_list,pos]
+    outfile = open(experiment_path + '/Composite/rulepop/networkpickle', 'wb')
+    pickle.dump(to_save, outfile)
+    outfile.close()
+
     max_node_value = max(acc_spec_dict.values())
     for i in acc_spec_dict:
         acc_spec_dict[i] = math.pow(acc_spec_dict[i] / max_node_value, 3) * 1000  # Cubic Node Size Function
@@ -114,13 +122,14 @@ def main(argv):
     for i in range(len(weight_list)):
         weight_list[i] = math.pow(weight_list[i] / max_weight_value, 3) * 10  # Cubic Weight Function
 
-    nx.draw_networkx_nodes(G, pos=pos, nodelist=acc_spec_dict.keys(), node_size=[v * 1 for v in acc_spec_dict.values()],
-                           node_color='#FF3377')
+    nx.draw_networkx_nodes(G, pos=pos, nodelist=acc_spec_dict.keys(), node_size=[v * 1 for v in acc_spec_dict.values()], node_color='#FF3377')
     nx.draw_networkx_edges(G, pos=pos, edge_color='#E0B8FF', edgelist=edge_list, width=[v * 1 for v in weight_list])
     nx.draw_networkx_labels(G, pos=pos)
     plt.axis('off')
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopGraph.png', dpi=300)
     plt.close('all')
+
+
     ####################################################################################################################
 
 def submitLocalATJob(experiment_path,at_height_factor):
