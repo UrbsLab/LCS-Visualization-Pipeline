@@ -11,13 +11,13 @@ import AnalysisPhase1Job
 
 '''Sample Run Code
 #MP6 problem
-python AnalysisPhase1.py --d ../Datasets/mp6_full.csv --o Outputs --e mp6v3 --inst Instance --group Group --iter 20000 --N 500 --nu 10 --cluster 0
+python AnalysisPhase1.py --d ../Datasets/mp6_full.csv --o ../Outputs --e mp6nocsub --inst Instance --group Group --iter 20000 --N 500 --nu 10 --cluster 0
 
 #MP11 problem
 python AnalysisPhase1.py --d Datasets/mp11_full.csv --o Outputs --e mp11v3 --inst Instance --group Group --iter 20000 --N 1000 --nu 10
 
 #MP20 problem
-python AnalysisPhase1.py --d Datasets/mp20_full.csv --o Outputs --e mp20v3 --inst Instance --group Group --iter 100000 --N 2000 --nu 10
+python AnalysisPhase1.py --d ../Datasets/mp20_full.csv --o ../Outputs --e mp20nocsub --inst Instance --group Group --iter 100000 --N 2000 --nu 10 --cluster 0
 
 #CHOP Dataset
 python AnalysisPhase1.py --d /home/robertzh/visualizations/vizdata/junechoptest3.csv --o /home/robertzh/visualizations/vizoutputs --e choptest3 --inst customer_deidentified --class IsDrivingPassing --iter 2000000 --N 5000 --nu 1 --cv 3

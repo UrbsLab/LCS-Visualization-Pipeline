@@ -1,7 +1,7 @@
 import sys
 import time
 import pickle
-from Utilities import pearsonDistance, find_elbow
+from Utilities import find_elbow
 import numpy as np
 import pandas as pd
 import math
@@ -81,14 +81,10 @@ def job(experiment_path, at_height_factor):
     merged_test = np.array(merged_test)
 
     # AT Clustermaps and CSV Analysis
-    try:
-        g = seaborn.clustermap(AT_full_df, metric='correlation', method='ward', cmap='plasma')
-    except:
-        print('AT Clustermap default pearson failed. Trying slower own Pearson method instead')
-        g = seaborn.clustermap(AT_full_df, metric=pearsonDistance, method='ward', cmap='plasma')
+    g = seaborn.clustermap(AT_full_df, metric='sqeuclidean', method='ward', cmap='plasma')
 
     cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, full_instance_labels, AT_full_df.to_numpy())
-    clusters, colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='correlation',method='ward', random_state=random_state)
+    clusters, colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='sqeuclidean',method='ward', random_state=random_state)
 
     AT_distortions = []
 
@@ -96,7 +92,7 @@ def job(experiment_path, at_height_factor):
         if not os.path.exists(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters'):
             os.mkdir(experiment_path + '/Composite/at/atclusters/' + str(cluster_count) + '_clusters')
 
-        subclusters, colors = cluster_tree.getNSignificantClusters(cluster_count, p_value=0.05, sample_count=100,metric='correlation', method='ward',random_state=random_state)
+        subclusters, colors = cluster_tree.getNSignificantClusters(cluster_count, p_value=0.05, sample_count=100,metric='sqeuclidean', method='ward',random_state=random_state)
 
         # Elbow Method
         centroids = []
@@ -108,7 +104,7 @@ def job(experiment_path, at_height_factor):
             centroid /= len(cluster)
             centroids.append(centroid)
         centroids = np.array(centroids)
-        AT_distortions.append(sum(np.min(cdist(merged_AT, centroids, 'euclidean'), axis=1)))
+        AT_distortions.append(sum(np.min(cdist(merged_AT, centroids, 'sqeuclidean'), axis=1)))
 
         # Clustermaps
         color_dict = {}

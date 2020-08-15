@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 import HClust
 
-from Utilities import spearmanDistance, pearsonDistance, find_elbow
+from Utilities import find_elbow
 
-def job(experiment_path, rulepop_clustering_method, rule_height_factor):
+def job(experiment_path, rule_height_factor):
     job_start_time = time.time()
 
     # Load information
@@ -88,29 +88,11 @@ def job(experiment_path, rulepop_clustering_method, rule_height_factor):
     plt.close('all')
 
     # Rule Population Clustermaps
-    if rulepop_clustering_method == 'spearman':
-        metric = spearmanDistance
-    elif rulepop_clustering_method == 'pearson':
-        metric = pearsonDistance
-    else:
-        metric = 'correlation'
-
-    if rulepop_clustering_method == 'pearson':
-        try:
-            r = seaborn.clustermap(rule_df, metric='correlation', method='ward', cmap='plasma')
-        except:
-            r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
-    else:
-        r = seaborn.clustermap(rule_df, metric=metric, method='ward', cmap='plasma')
+    r = seaborn.clustermap(rule_df, metric='sqeuclidean', method='ward', cmap='plasma')
     rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(micro_rule_index_count)),rule_df.to_numpy())
 
-    if rulepop_clustering_method == 'pearson':
-        try:
-            rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric='correlation', method='ward',random_state=random_state)
-        except:
-            rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric=metric, method='ward',random_state=random_state)
-    else:
-        rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric=metric, method='ward',random_state=random_state)
+
+    rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric='sqeuclidean', method='ward',random_state=random_state)
 
     rule_distortions = []
     for rule_cluster_count in reversed(range(1, len(rule_clusters) + 1)):
@@ -118,7 +100,7 @@ def job(experiment_path, rulepop_clustering_method, rule_height_factor):
                 experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters'):
             os.mkdir(experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters')
 
-        rule_subclusters, rule_colors = rule_cluster_tree.getNSignificantClusters(rule_cluster_count, p_value=0.05,sample_count=100, metric=metric,method='ward',random_state=random_state)
+        rule_subclusters, rule_colors = rule_cluster_tree.getNSignificantClusters(rule_cluster_count, p_value=0.05,sample_count=100, metric='sqeuclidean',method='ward',random_state=random_state)
 
         # Elbow Method
         centroids = []
@@ -129,7 +111,7 @@ def job(experiment_path, rulepop_clustering_method, rule_height_factor):
             centroid /= len(cluster)
             centroids.append(centroid)
         centroids = np.array(centroids)
-        rule_distortions.append(sum(np.min(cdist(rule_specificity_array, centroids, 'euclidean'), axis=1)))
+        rule_distortions.append(sum(np.min(cdist(rule_specificity_array, centroids, 'sqeuclidean'), axis=1)))
 
         # Clustermaps
         rule_color_dict = {}

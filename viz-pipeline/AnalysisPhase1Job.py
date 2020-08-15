@@ -53,7 +53,7 @@ def job(experiment_path,cv):
 
     # Train ExSTraCS Model
     model = ExSTraCS(learning_iterations=learning_iterations, N=N, nu=nu,attribute_tracking_method=attribute_tracking_method,
-                     rule_compaction=None,random_state=random_state,do_correct_set_subsumption=True,expert_knowledge=scores)
+                     rule_compaction=None,random_state=random_state,do_correct_set_subsumption=False,expert_knowledge=scores)
     model.fit(train_data_features, train_data_phenotypes)
 
     outfile = open(experiment_path + '/CV_' + str(cv) + '/model', 'wb')

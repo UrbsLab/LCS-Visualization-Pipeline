@@ -12,13 +12,13 @@ import pickle
 
 '''Sample Run Code
 #MP6 problem
-python AnalysisPhase2.py --o Outputs --e mp6v3 --cluster 0
+python AnalysisPhase2.py --o ../Outputs --e mp6nocsub --cluster 0
 
 #MP11 problem
 python AnalysisPhase2.py --o Outputs --e mp11v3
 
 #MP20 problem
-python AnalysisPhase2.py --o Outputs --e mp20v3
+python AnalysisPhase2.py --o ../Outputs --e mp20nocsub --cluster 0
 
 #CHOP Dataset
 python AnalysisPhase2.py --o /home/robertzh/visualizations/vizoutputs --e choptest1
@@ -29,19 +29,15 @@ def main(argv):
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--o', dest='output_path', type=str, help='path to output directory')
     parser.add_argument('--e', dest='experiment_name', type=str, help='name of experiment (no spaces)')
-    parser.add_argument('--rulepop-method', dest='rulepop_clustering_method', type=str, default='pearson')
     parser.add_argument('--rheight', dest='rule_height_factor', type=float, default=1)
     parser.add_argument('--aheight', dest='at_height_factor', type=float, default=1)
-    parser.add_argument('--nspace', dest='network_space_factor', type=float, default=1)
     parser.add_argument('--cluster', dest='do_cluster', type=int, default=1)
     options = parser.parse_args(argv[1:])
 
     output_path = options.output_path
     experiment_name = options.experiment_name
-    rulepop_clustering_method = options.rulepop_clustering_method
     rule_height_factor = options.rule_height_factor
     at_height_factor = options.at_height_factor
-    network_space_factor = options.network_space_factor
     do_cluster = options.do_cluster
     experiment_path = output_path + '/' + experiment_name
 
@@ -55,10 +51,10 @@ def main(argv):
 
     if do_cluster == 1:
         submitClusterATJob(experiment_path,at_height_factor)
-        submitClusterRuleJob(experiment_path,rulepop_clustering_method,rule_height_factor)
+        submitClusterRuleJob(experiment_path,rule_height_factor)
     else:
         submitLocalATJob(experiment_path,at_height_factor)
-        submitLocalRuleJob(experiment_path,rulepop_clustering_method,rule_height_factor)
+        submitLocalRuleJob(experiment_path,rule_height_factor)
 
     ####################################################################################################################
     # Load information
@@ -107,7 +103,7 @@ def main(argv):
         edge_list.append((co[0], co[1]))
         weight_list.append(co[3])
 
-    pos = nx.spring_layout(G, k=1, scale=network_space_factor)
+    pos = nx.spring_layout(G, k=1)
 
     to_save = [acc_spec_dict,edge_list,weight_list,pos]
     outfile = open(experiment_path + '/Composite/rulepop/networkpickle', 'wb')
@@ -135,8 +131,8 @@ def main(argv):
 def submitLocalATJob(experiment_path,at_height_factor):
     AnalysisPhase2ATJob.job(experiment_path,at_height_factor)
 
-def submitLocalRuleJob(experiment_path,rulepop_clustering_method,rule_height_factor):
-    AnalysisPhase2RuleJob.job(experiment_path,rulepop_clustering_method,rule_height_factor)
+def submitLocalRuleJob(experiment_path,rule_height_factor):
+    AnalysisPhase2RuleJob.job(experiment_path,rule_height_factor)
 
 def submitClusterATJob(experiment_path,at_height_factor):
     job_ref = str(time.time())
@@ -152,7 +148,7 @@ def submitClusterATJob(experiment_path,at_height_factor):
     sh_file.close()
     os.system('bsub < ' + job_name)
 
-def submitClusterRuleJob(experiment_path,rulepop_clustering_method,rule_height_factor):
+def submitClusterRuleJob(experiment_path,rule_height_factor):
     job_ref = str(time.time())
     job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
     sh_file = open(job_name, 'w')
@@ -162,7 +158,7 @@ def submitClusterRuleJob(experiment_path,rulepop_clustering_method,rule_height_f
     sh_file.write('#BSUB -e ' + experiment_path + '/logs/' + job_ref + '.e\n')
 
     this_file_path = os.path.dirname(os.path.realpath(__file__))
-    sh_file.write('python ' + this_file_path + '/AnalysisPhase2RuleJob.py ' + experiment_path + " " + str(rulepop_clustering_method) + ' '+str(rule_height_factor)+'\n')
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase2RuleJob.py ' + experiment_path + " " + str(rule_height_factor)+'\n')
     sh_file.close()
     os.system('bsub < ' + job_name)
 
