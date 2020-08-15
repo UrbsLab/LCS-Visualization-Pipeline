@@ -93,12 +93,12 @@ def main(argv):
     if not save_opened:
         label_display = {}
         for nodename in acc_spec_dict:
-            font = pygame.font.SysFont("monospace", int(acc_spec_dict[nodename]/node_maxsize*label_maxsize))
+            font = pygame.font.SysFont("monospace", max(20,int(acc_spec_dict[nodename]/node_maxsize*label_maxsize)))
             label_display[nodename] = [show_labels,font]
     else:
         label_display = {}
         for nodename in acc_spec_dict:
-            font = pygame.font.SysFont("monospace", int(acc_spec_dict[nodename] / node_maxsize * label_maxsize))
+            font = pygame.font.SysFont("monospace", max(20,int(acc_spec_dict[nodename] / node_maxsize * label_maxsize))) #font minsize is 10
             label_display[nodename] = [info[4][nodename], font]
 
     dragged_nodes = []
@@ -117,6 +117,8 @@ def main(argv):
                 outfile = open(experiment_path + '/Composite/rulepop/savedpygame', 'wb')
                 pickle.dump(to_save, outfile)
                 outfile.close()
+
+                pygame.image.save(window_surface,experiment_path + '/Composite/rulepop/saved.png')
 
                 pygame.quit()
                 sys.exit()

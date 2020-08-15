@@ -5,6 +5,7 @@ import numpy as np
 import csv
 import time
 import sys
+from skrebate import MultiSURF
 
 def job(experiment_path,cv):
     job_start_time = time.time()
@@ -37,8 +38,22 @@ def job(experiment_path,cv):
     if not os.path.exists(experiment_path + '/CV_' + str(cv)):
         os.mkdir(experiment_path + '/CV_' + str(cv))
 
+    #MultiSURF Feature Scoring
+    merged = np.insert(train_data_features, train_data_features.shape[1], train_data_phenotypes, 1)
+    rb_sample = np.random.choice(merged.shape[0], min(1000,merged.shape[0]), replace=False)
+    new_data = []
+    for i in rb_sample:
+        new_data.append(merged[i])
+    new_data = np.array(new_data)
+    data_featuresR = np.delete(new_data, -1, axis=1)
+    data_phenotypesR = new_data[:, -1]
+    featureimportance_model = MultiSURF()
+    featureimportance_model.fit(data_featuresR, data_phenotypesR)
+    scores = featureimportance_model.feature_importances_
+
     # Train ExSTraCS Model
-    model = ExSTraCS(learning_iterations=learning_iterations, N=N, nu=nu,attribute_tracking_method=attribute_tracking_method, rule_compaction=None,random_state=random_state)
+    model = ExSTraCS(learning_iterations=learning_iterations, N=N, nu=nu,attribute_tracking_method=attribute_tracking_method,
+                     rule_compaction=None,random_state=random_state,do_correct_set_subsumption=True,expert_knowledge=scores)
     model.fit(train_data_features, train_data_phenotypes)
 
     outfile = open(experiment_path + '/CV_' + str(cv) + '/model', 'wb')
