@@ -1,0 +1,13 @@
+include README.md
+include LICENSE
+prune Archive/
+prune Datasets/
+prune GUI/
+prune Outputs/
+prune venv/
+global-exclude .gitignore
+global-exclude AnalysisPipeline3.py
+global-exclude LargeMPGenerator.py
+global-exclude MPGenerator.py
+global-exclude PostCleanup.py
+global-exclude *.png

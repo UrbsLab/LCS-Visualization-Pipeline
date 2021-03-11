@@ -7,48 +7,40 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-import AnalysisPhase1Job
+import AnalysisPhase1_pretrainedJob
+import glob
 
 '''Sample Run Code
-#MP6 problem
-python AnalysisPhase1.py --d ../Datasets/mp6_full.csv --o ../Outputs --e mp6nocsub --inst Instance --group Group --iter 20000 --N 500 --nu 10 --cluster 0
+python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e test1 --d /Users/robert/Desktop/outputs/test1/mp6/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp6/training/pickledModels --inst Instance --cv 3 --cluster 0
+python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e test1 --d /Users/robert/Desktop/outputs/test1/mp11/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp11/training/pickledModels --inst Instance --cv 3 --cluster 0
 
-#MP11 problem
-python AnalysisPhase1.py --d Datasets/mp11_full.csv --o Outputs --e mp11v3 --inst Instance --group Group --iter 20000 --N 1000 --nu 10
 
-#MP20 problem
-python AnalysisPhase1.py --d ../Datasets/mp20_full.csv --o ../Outputs --e mp20nocsub --inst Instance --group Group --iter 100000 --N 2000 --nu 10 --cluster 0
-
-#CHOP Dataset
-python AnalysisPhase1.py --d /home/robertzh/visualizations/vizdata/junechoptest3.csv --o /home/robertzh/visualizations/vizoutputs --e choptest3 --inst customer_deidentified --class IsDrivingPassing --iter 2000000 --N 5000 --nu 1 --cv 3
-python AnalysisPhase1.py --d /home/robertzh/visualizations/vizdata/junechoptest2.csv --o /home/robertzh/visualizations/vizoutputs --e choptest2 --inst customer_deidentified --class IsDrivingPassing --iter 2000000 --N 5000 --nu 1 --cv 3
 '''
 
 def main(argv):
     # Parse arguments
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--d', dest='data_path', type=str, help='path to directory containing datasets')
+    parser.add_argument('--d', dest='data_path', type=str, help='path to directory containing presplit train/test datasets ending with _CV_Test/Train.csv')
+    parser.add_argument('--m', dest='model_path', type=str, help='path to directory containing pretrained ExSTraCS Models labeled ExStraCS_CV')
     parser.add_argument('--o', dest='output_path', type=str, help='path to output directory')
     parser.add_argument('--e', dest='experiment_name', type=str, help='name of experiment (no spaces)')
 
     parser.add_argument('--class', dest='class_label', type=str, default="Class")
     parser.add_argument('--inst', dest='instance_label', type=str, default="None")
-    parser.add_argument('--group', dest='group_label', type=str, default="None")
 
     parser.add_argument('--cv', dest='cv_partitions', type=int, help='number of CV partitions', default=3)
-
-    parser.add_argument('--iter', dest='learning_iterations', type=int, default=16000)
-    parser.add_argument('--N', dest='N', type=int, default=1000)
-    parser.add_argument('--nu', dest='nu', type=int, default=1)
-    parser.add_argument('--at-method', dest='attribute_tracking_method', type=str, default='wh')
     parser.add_argument('--random-state',dest='random_state',type=str,default='None')
 
     parser.add_argument('--cluster', dest='do_cluster', type=int, default=1)
+    parser.add_argument('--m1', dest='memory1', type=int, default=2)
+    parser.add_argument('--m2', dest='memory2', type=int, default=3)
 
     options = parser.parse_args(argv[1:])
     data_path = options.data_path
+    model_path = options.model_path
     output_path = options.output_path
     experiment_name = options.experiment_name
+
     if options.class_label == 'None':
         class_label = None
     else:
@@ -57,27 +49,25 @@ def main(argv):
         instance_label = None
     else:
         instance_label = options.instance_label
-    if options.group_label == 'None':
-        group_label = None
-    else:
-        group_label = options.group_label
+    group_label = None
+    visualize_true_clusters = False
+
     cv_count = options.cv_partitions
-    learning_iterations = options.learning_iterations
-    N = options.N
-    nu = options.nu
-    attribute_tracking_method = options.attribute_tracking_method
+
     if options.random_state == 'None':
         random_state = random.randint(0, 1000000)
     else:
         random_state = options.random_state
     do_cluster = options.do_cluster
+    memory1 = options.memory1
+    memory2 = options.memory2
 
     # Create experiment folders and check path validity
     if not os.path.exists(data_path):
         raise Exception("Provided data_path does not exist")
 
     for char in experiment_name:
-        if not char in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890':
+        if not char in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_':
             raise Exception('Experiment Name must be alphanumeric')
 
     experiment_path = output_path + '/' + experiment_name
@@ -88,43 +78,61 @@ def main(argv):
         os.mkdir(output_path + '/' + experiment_name + '/jobs')
         os.mkdir(output_path + '/' + experiment_name + '/logs')
 
-    # Write Metadata
-    outfile = open(experiment_path + '/trainingMetadata', mode='w')
-    outfile.write('data_path: ' + str(data_path) + '\n')
-    outfile.write('CV: ' + str(cv_count) + '\n')
-    outfile.write('learning_iterations: ' + str(learning_iterations) + '\n')
-    outfile.write('N: ' + str(N) + '\n')
-    outfile.write('nu: ' + str(nu) + '\n')
-    outfile.write('attribute_tracking_method: ' + str(attribute_tracking_method) + '\n')
-    outfile.write('random_state: ' + str(random_state) + '\n')
-    outfile.close()
-
-    # Read in data
-    if data_path[-1] == 't':  # txt
-        dataset = pd.read_csv(data_path, sep='\t')
-    elif data_path[-1] == 'v':  # csv
-        dataset = pd.read_csv(data_path, sep=',')
-    elif data_path[-1] == 'z':  # .txt.gz
-        dataset = pd.read_csv(data_path, sep='\t', compression='gzip')
-    else:
-        raise Exception('Unrecognized File Type')
-
     # Random seed
     random.seed(random_state)
     np.random.seed(random_state)
 
-    # Remove 'unnamed columns'
-    dataset = dataset.loc[:, ~dataset.columns.str.contains('^Unnamed')]
+    # Read in train and test dfs
+    instance_label_map = None
+    train_dfs = []
+    test_dfs = []
+    for i in range(cv_count):
+        dataset_train = None
+        dataset_test = None
+        for file in glob.glob(data_path+'/*_'+str(i)+'_Train.csv'):
+            dataset_train = pd.read_csv(file, sep=',')
+            dataset_train = dataset_train.loc[:, ~dataset_train.columns.str.contains('^Unnamed')]
+            dataset_train = dataset_train.assign(group=np.ones(dataset_train.values.shape[0]))
+        for file in glob.glob(data_path+'/*_'+str(i)+'_Test.csv'):
+            dataset_test = pd.read_csv(file, sep=',')
+            dataset_test = dataset_test.loc[:, ~dataset_test.columns.str.contains('^Unnamed')]
+            dataset_test = dataset_test.assign(group=np.ones(dataset_test.values.shape[0]))
 
-    # Add Instance and Group Label Columns if necessary
-    visualize_true_clusters = True
-    if instance_label == None:
-        dataset = dataset.assign(instance=np.array(list(range(dataset.values.shape[0]))))
-    if group_label == None:
-        dataset = dataset.assign(group=np.ones(dataset.values.shape[0]))
-        visualize_true_clusters = False
+        if instance_label == None:
+            if i == 0:
+                train_len = dataset_train.values.shape[0]
+                test_len = dataset_test.values.shape[0]
+                dataset_train = dataset_train.assign(instance=np.array(list(range(train_len))))
+                dataset_test = dataset_test.assign(instance=np.array(list(range(train_len,train_len+test_len))))
+                train_dfs.append(dataset_train)
+                test_dfs.append(dataset_test)
 
-    train_dfs, test_dfs = cv_partitioner(dataset, cv_count, class_label, random_state)
+                train_values = dataset_train.values
+                test_values = dataset_test.values
+
+                instance_label_map = np.concatenate((train_values,test_values),axis=0)
+            else:
+                train_labels = []
+                train_values = dataset_train.values
+                for row in train_values:
+                    for row2 in instance_label_map:
+                        if np.array_equal(row,row2[1:]) and not row2[0] in train_labels:
+                            train_labels.append(row2[0])
+                dataset_train = dataset_train.assign(instance=np.array(train_labels))
+                train_dfs.append(dataset_train)
+
+                test_labels = []
+                test_values = dataset_test.values
+                for row in test_values:
+                    for row2 in instance_label_map:
+                        if np.array_equal(row, row2[1:]) and not row2[0] in train_labels and not row2[0] in test_labels:
+                            test_labels.append(row2[0])
+                dataset_test = dataset_test.assign(instance=np.array(test_labels))
+                test_dfs.append(dataset_test)
+        else:
+            train_dfs.append(dataset_train)
+            test_dfs.append(dataset_test)
+
 
     ####################################################################################################################
     # Create cv information
@@ -167,29 +175,8 @@ def main(argv):
              test_data_phenotypes, test_instance_labels, test_group_labels, use_inst_label, use_group_label])
         tt_inst += train_instance_labels
 
-    # Group Colors and Instance Labels
-    full_df = copy.deepcopy(dataset)
-    if instance_label != None and group_label != None:
-        full_df.set_index([instance_label, group_label], inplace=True)
-        use_group_label = group_label
-        use_inst_label = instance_label
-    elif instance_label != None and group_label == None:
-        full_df = full_df.assign(group=np.ones(full_df.values.shape[0]))
-        full_df.set_index([instance_label, 'group'], inplace=True)
-        use_group_label = 'group'
-        use_inst_label = instance_label
-    elif instance_label == None and group_label != None:
-        full_df = full_df.assign(instance=np.array(list(range(full_df.values.shape[0]))))
-        full_df.set_index([group_label, 'instance'], inplace=True)
-        use_group_label = group_label
-        use_inst_label = 'instance'
-    else:
-        full_df = full_df.assign(instance=np.array(list(range(full_df.values.shape[0]))))
-        full_df = full_df.assign(group=np.ones(full_df.values.shape[0]))
-        full_df.set_index(['group', 'instance'], inplace=True)
-        use_group_label = 'group'
-        use_inst_label = 'instance'
 
+    full_df = pd.concat([train_dfs[0],test_dfs[0]])
     data_features = full_df.drop(class_label, axis=1).values
     data_phenotypes = full_df[class_label].values
     data_headers = full_df.drop(class_label, axis=1).columns.values
@@ -201,22 +188,22 @@ def main(argv):
         group_colors[group_name] = random_color
     full_info = [data_features,data_phenotypes,data_headers,full_instance_labels,full_group_labels,group_colors]
 
-    phase1_pickle = [cv_info, full_info, visualize_true_clusters,learning_iterations,N,nu,attribute_tracking_method,random_state,class_label,cv_count]
+    phase1_pickle = [cv_info, full_info, visualize_true_clusters,'0','0','0','0',random_state,class_label,cv_count,'0','0',model_path]
     outfile = open(experiment_path+'/phase1pickle', 'wb')
     pickle.dump(phase1_pickle, outfile)
     outfile.close()
 
     for cv in range(cv_count):
         if do_cluster == 1:
-            submitClusterJob(cv,experiment_path)
+            submitClusterJob(cv,experiment_path,memory1,memory2)
         else:
             submitLocalJob(cv,experiment_path)
 
     ####################################################################################################################
 def submitLocalJob(cv,experiment_path):
-    AnalysisPhase1Job.job(experiment_path,cv)
+    AnalysisPhase1_pretrainedJob.job(experiment_path,cv)
 
-def submitClusterJob(cv,experiment_path):
+def submitClusterJob(cv,experiment_path,memory1,memory2):
     job_ref = str(time.time())
     job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
     sh_file = open(job_name, 'w')
@@ -226,12 +213,12 @@ def submitClusterJob(cv,experiment_path):
     sh_file.write('#BSUB -e ' + experiment_path + '/logs/' + job_ref + '.e\n')
 
     this_file_path = os.path.dirname(os.path.realpath(__file__))
-    sh_file.write('python ' + this_file_path + '/AnalysisPhase1Job.py ' + experiment_path + " " + str(cv) + '\n')
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_pretrainedJob.py ' + experiment_path + " " + str(cv) + '\n')
     sh_file.close()
-    os.system('bsub < ' + job_name)
+    os.system('bsub -q i2c2_normal -R "rusage[mem='+str(memory1)+'G]" -M '+str(memory2)+'G < ' + job_name)
     ####################################################################################################################
 
-def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed):
+def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed,method,match_label):
     # Shuffle instances to avoid potential biases
     td = td.sample(frac=1, random_state=randomSeed).reset_index(drop=True)
 
@@ -251,21 +238,47 @@ def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed):
     for x in range(cv_partitions):
         partList.append([])
 
-    # Stratified Partitioning Method-----------------------
-    byClassRows = [[] for i in range(len(classList))]  # create list of empty lists (one for each class)
-    for row in datasetList:
-        # find index in classList corresponding to the class of the current row.
-        cIndex = classList.index(row[outcomeIndex])
-        byClassRows[cIndex].append(row)
+    if method == 'stratified':
+        # Stratified Partitioning Method-----------------------
+        byClassRows = [[] for i in range(len(classList))]  # create list of empty lists (one for each class)
+        for row in datasetList:
+            # find index in classList corresponding to the class of the current row.
+            cIndex = classList.index(row[outcomeIndex])
+            byClassRows[cIndex].append(row)
 
-    for classSet in byClassRows:
+        for classSet in byClassRows:
+            currPart = 0
+            counter = 0
+            for row in classSet:
+                partList[currPart].append(row)
+                counter += 1
+                currPart = counter % cv_partitions
+    elif method == 'matched':
+        match_index = td.columns.get_loc(match_label)
+        match_list = []
+        for row in datasetList:
+            if row[match_index] not in match_list:
+                match_list.append(row[match_index])
+
+        byMatchRows = [[] for i in range(len(match_list))]  # create list of empty lists (one for each match group)
+        for row in datasetList:
+            # find index in matchList corresponding to the matchset of the current row.
+            mIndex = match_list.index(row[match_index])
+            row.pop(match_index)  # remove match column from partition output
+            byMatchRows[mIndex].append(row)
+
         currPart = 0
         counter = 0
-        for row in classSet:
-            partList[currPart].append(row)
+        for matchSet in byMatchRows:  # Go through each unique set of matched instances
+            for row in matchSet:  # put all of the instances
+                partList[currPart].append(row)
+            # move on to next matchset being placed in the next partition.
             counter += 1
             currPart = counter % cv_partitions
 
+        header.pop(match_index)  # remove match column from partition output
+
+    # Create Output
     train_dfs = []
     test_dfs = []
     for part in range(0, cv_partitions):

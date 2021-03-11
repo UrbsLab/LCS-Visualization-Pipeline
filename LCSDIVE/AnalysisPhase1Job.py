@@ -21,6 +21,8 @@ def job(experiment_path,cv):
     attribute_tracking_method = phase1_pickle[6]
     random_state = phase1_pickle[7]
     class_label = phase1_pickle[8]
+    feature_selection_sample_size = phase1_pickle[10]
+    rule_compaction_method = phase1_pickle[11]
     data_headers = phase1_pickle[1][2]
 
     train_data_features = cv_info[cv][0]
@@ -40,7 +42,7 @@ def job(experiment_path,cv):
 
     #MultiSURF Feature Scoring
     merged = np.insert(train_data_features, train_data_features.shape[1], train_data_phenotypes, 1)
-    rb_sample = np.random.choice(merged.shape[0], min(1000,merged.shape[0]), replace=False)
+    rb_sample = np.random.choice(merged.shape[0], min(feature_selection_sample_size,merged.shape[0]), replace=False)
     new_data = []
     for i in rb_sample:
         new_data.append(merged[i])
@@ -53,7 +55,7 @@ def job(experiment_path,cv):
 
     # Train ExSTraCS Model
     model = ExSTraCS(learning_iterations=learning_iterations, N=N, nu=nu,attribute_tracking_method=attribute_tracking_method,
-                     rule_compaction=None,random_state=random_state,do_correct_set_subsumption=False,expert_knowledge=scores)
+                     rule_compaction=rule_compaction_method,random_state=random_state,do_correct_set_subsumption=False,expert_knowledge=scores)
     model.fit(train_data_features, train_data_phenotypes)
 
     outfile = open(experiment_path + '/CV_' + str(cv) + '/model', 'wb')

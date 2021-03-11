@@ -5,12 +5,14 @@ import seaborn
 from statistics import mean
 import csv
 import matplotlib.pyplot as plt
-from scipy.spatial.distance import cdist
+from scipy.spatial.distance import cdist, pdist, squareform
 import os
 import math
 import numpy as np
 import pandas as pd
 import HClust
+from sklearn.metrics import silhouette_score
+import matplotlib as mpl
 
 from Utilities import find_elbow
 
@@ -29,52 +31,31 @@ def job(experiment_path, rule_height_factor):
     class_label = phase1_pickle[8]
     random_state = phase1_pickle[7]
 
+    cmap = mpl.colors.ListedColormap(['xkcd:navy blue','xkcd:yellow'])
+
     # Merge Rule Population
     merged_population = []
-    models = []
     for cv in range(cv_count):
         file = open(experiment_path + '/CV_' + str(cv) + '/model', 'rb')
         model = pickle.load(file)
-        models.append(model)
         for rule in model.population.popSet:
-            shouldAdd = True
-            for merged_rule in merged_population:
-                if rule.equals(merged_rule):
-                    shouldAdd = False
-                    if not isinstance(merged_rule.numerosity, list):
-                        merged_rule.numerosity = [merged_rule.numerosity, rule.numerosity]
-                        merged_rule.accuracy = [merged_rule.accuracy, rule.accuracy]
-                        merged_rule.initTimeStamp = [merged_rule.initTimeStamp, rule.initTimeStamp]
-                    else:
-                        merged_rule.numerosity.append(rule.numerosity)
-                        merged_rule.accuracy.append(rule.accuracy)
-                        merged_rule.initTimeStamp.append(rule.initTimeStamp)
-            if shouldAdd:
-                merged_population.append(rule)
-
-    for rule in merged_population:
-        if isinstance(rule.numerosity, list):
-            rule.numerosity = int(sum(rule.numerosity))
-            rule.accuracy = mean(rule.accuracy)
-            rule.initTimeStamp = int(mean(rule.initTimeStamp))
+            merged_population.append(rule)
 
     num_rules = len(merged_population)
     rule_specificity_array = []
-    for inst in range(num_rules):
-        a = []
-        for attribute in range(len(data_headers)):
-            a.append(0)
-        rule = merged_population[inst]
-        for microclassifier in range(rule.numerosity):
-            rule_specificity_array.append(a)
-
     micro_to_macro_rule_index_map = {}
     micro_rule_index_count = 0
     macro_rule_index_count = 0
-    for classifier in merged_population:
-        for microclassifier in range(classifier.numerosity):
-            for i in classifier.specifiedAttList:
-                rule_specificity_array[micro_rule_index_count][i] = 1
+    for inst in range(num_rules):
+        rule = merged_population[inst]
+        a = []
+        for attribute in range(len(data_headers)):
+            if attribute in rule.specifiedAttList:
+                a.append(1)
+            else:
+                a.append(0)
+        for microclassifier in range(rule.numerosity):
+            rule_specificity_array.append(a)
             micro_to_macro_rule_index_map[micro_rule_index_count] = macro_rule_index_count
             micro_rule_index_count += 1
         macro_rule_index_count += 1
@@ -83,18 +64,31 @@ def job(experiment_path, rule_height_factor):
     rule_df = pd.DataFrame(rule_specificity_array, columns=data_headers, index=list(range(micro_rule_index_count)))
 
     plt.figure(figsize=((10 / math.sqrt(rule_height_factor), 10 * math.sqrt(rule_height_factor))))
-    seaborn.heatmap(rule_df, cmap='plasma')
+    h = seaborn.heatmap(rule_df, cmap=cmap, cbar_kws={'ticks':[0,1]})
+    h.tick_params(left=False,labelleft=False)
+    if rule_specificity_array.shape[1] <= 11:
+        h.set_xticklabels(h.get_xmajorticklabels(),fontsize='xx-large')
+    elif rule_specificity_array.shape[1] <= 20:
+        h.set_xticklabels(h.get_xmajorticklabels(),fontsize='x-large')
+    if rule_specificity_array.shape[1] >= 20:
+        plt.xticks(rotation=90)
+    plt.xlabel('Features',fontsize='xx-large')
+    plt.ylabel('Rules',fontsize='xx-large')
+    plt.tight_layout()
     plt.savefig(experiment_path + '/Composite/rulepop/rulepopHeatmap.png')
     plt.close('all')
 
     # Rule Population Clustermaps
-    r = seaborn.clustermap(rule_df, metric='sqeuclidean', method='ward', cmap='plasma')
+    r = seaborn.clustermap(rule_df, metric='sqeuclidean', method='ward', cmap=cmap, cbar_kws={'ticks':[0,1]})
     rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(micro_rule_index_count)),rule_df.to_numpy())
-
 
     rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric='sqeuclidean', method='ward',random_state=random_state)
 
     rule_distortions = []
+
+    precomputed_distances = squareform(pdist(rule_specificity_array, metric='sqeuclidean'))
+    silhouettes = []
+
     for rule_cluster_count in reversed(range(1, len(rule_clusters) + 1)):
         if not os.path.exists(
                 experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters'):
@@ -113,6 +107,18 @@ def job(experiment_path, rule_height_factor):
         centroids = np.array(centroids)
         rule_distortions.append(sum(np.min(cdist(rule_specificity_array, centroids, 'sqeuclidean'), axis=1)))
 
+        # Silhouette Method
+        s_counter = 0
+        new_l = [0] * micro_rule_index_count
+        for cluster in rule_subclusters:
+            for inst_label_index in cluster:
+                new_l[inst_label_index] = s_counter
+            s_counter += 1
+        if rule_cluster_count != 1:
+            silhouettes.append(silhouette_score(precomputed_distances, new_l, metric='precomputed'))
+        else:
+            silhouettes.append(0)
+
         # Clustermaps
         rule_color_dict = {}
         rule_color_count = 0
@@ -123,9 +129,19 @@ def job(experiment_path, rule_height_factor):
             rule_color_count += 1
         rule_color_list = pd.Series(dict(sorted(rule_color_dict.items())))
         rule_color_list = pd.Series.to_frame(rule_color_list)
-        rule_color_list.columns = ['Found Clusters']
+        rule_color_list.columns = ['Found']
 
-        seaborn.clustermap(rule_df, row_linkage=r.dendrogram_row.linkage, col_linkage=r.dendrogram_col.linkage,row_colors=rule_color_list, cmap='plasma',figsize=(10 / math.sqrt(rule_height_factor), 10 * math.sqrt(rule_height_factor)))
+        c = seaborn.clustermap(rule_df, row_linkage=r.dendrogram_row.linkage, col_linkage=r.dendrogram_col.linkage,row_colors=rule_color_list, cmap=cmap, cbar_kws={'ticks':[0,1]}, figsize=(10 / math.sqrt(rule_height_factor), 10 * math.sqrt(rule_height_factor)))
+        c.ax_heatmap.tick_params(right=False,labelright=False)
+        if rule_specificity_array.shape[1] <= 11:
+            c.ax_heatmap.set_xticklabels(c.ax_heatmap.get_xmajorticklabels(), fontsize='xx-large')
+        elif rule_specificity_array.shape[1] <= 20:
+            c.ax_heatmap.set_xticklabels(c.ax_heatmap.get_xmajorticklabels(),fontsize='x-large')
+        c.ax_heatmap.set_xlabel('Features',fontsize='xx-large')
+        c.ax_heatmap.set_ylabel('Rules',fontsize='xx-large',rotation=-90,labelpad=20)
+        if rule_specificity_array.shape[1] >= 20:
+            plt.setp(c.ax_heatmap.get_xticklabels(),rotation=90)
+        plt.tight_layout()
         plt.savefig(experiment_path + '/Composite/rulepop/ruleclusters/' + str(rule_cluster_count) + '_clusters/ruleClustermap.png', dpi=300)
         plt.close('all')
 
@@ -134,8 +150,7 @@ def job(experiment_path, rule_height_factor):
             for rule_cluster in rule_subclusters:
                 exp_color = rule_color_dict[rule_cluster[0]]
                 writer.writerow(['ClusterID: ' + exp_color])
-                writer.writerow(
-                    list(data_headers) + [class_label, 'Accuracy', 'Numerosity', 'Specificity', 'Init Timestamp'])
+                writer.writerow(list(data_headers) + [class_label, 'Accuracy', 'Numerosity', 'Specificity', 'Init Timestamp'])
 
                 spec_sum = np.array([0.0] * len(data_headers))
                 acc_spec_sum = np.array([0.0] * len(data_headers))
@@ -188,19 +203,31 @@ def job(experiment_path, rule_height_factor):
                 writer.writerow(list(reversed(vs)))
 
                 writer.writerow(['Avg Accuracy', 'Avg Init Timestamp', 'Avg Specificity'])
-                writer.writerow(
-                    [acc_sum / numerosity_sum, init_ts_sum / numerosity_sum, specificity_sum / numerosity_sum])
+                writer.writerow([acc_sum / numerosity_sum, init_ts_sum / numerosity_sum, specificity_sum / numerosity_sum])
 
                 writer.writerow([])
         file.close()
 
     # Plot Rule Elbow Plot
     rule_distortions.reverse()
+    optimal_elbow = find_elbow(rule_distortions)
     plt.plot(range(1, len(rule_clusters) + 1), rule_distortions, 'bx-')
-    plt.xlabel('Number of Clusters')
-    plt.ylabel('Distortion')
-    plt.title('The Elbow Method using Distortion')
-    plt.savefig(experiment_path + '/Composite/rulepop/' + str(find_elbow(rule_distortions)) + 'optimalClusters.png',dpi=300)
+    plt.xlabel('Number of Clusters',fontsize='xx-large')
+    plt.ylabel('Distortion',fontsize='xx-large')
+    plt.axvline(x=optimal_elbow, color='xkcd:sky', linestyle='--',label='Elbow at: '+str(optimal_elbow))
+    plt.legend(fontsize='xx-large')
+    plt.savefig(experiment_path + '/Composite/rulepop/' + str(optimal_elbow) + 'optimalClusters.png',dpi=300)
+    plt.close('all')
+
+    # Plot AT Silhouette Plot
+    silhouettes.reverse()
+    optimal_silhouette = np.argmax(np.array(silhouettes))+1
+    plt.plot(range(1, len(rule_clusters) + 1), silhouettes, 'bx-')
+    plt.xlabel('Number of Clusters', fontsize='xx-large')
+    plt.ylabel('Silhouette Score', fontsize='xx-large')
+    plt.axvline(x=optimal_silhouette, color='xkcd:sky', linestyle='--', label='Max at: ' + str(optimal_silhouette))
+    plt.legend(fontsize='xx-large')
+    plt.savefig(experiment_path + '/Composite/rulepop/' + str(optimal_silhouette) + 'optimalSilhouette.png', dpi=300)
     plt.close('all')
 
     # Save Runtime
@@ -212,4 +239,4 @@ def job(experiment_path, rule_height_factor):
     print("Rule phase 2 complete")
 
 if __name__ == '__main__':
-    job(sys.argv[1],sys.argv[2],float(sys.argv[3]))
+    job(sys.argv[1],float(sys.argv[2]))

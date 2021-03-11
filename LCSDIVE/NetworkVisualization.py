@@ -8,7 +8,7 @@ from scipy.spatial import distance
 import copy
 
 '''Sample Run Code
-python NetworkVisualization.py --o Outputs --e mp6v3
+python NetworkVisualization.py --o ../Outputs/Final --e dietadj
 '''
 
 def main(argv):
@@ -20,7 +20,7 @@ def main(argv):
     parser.add_argument('--edgep', dest='edge_power', type=int, default=3)
     parser.add_argument('--nodes', dest='node_maxsize', type=int, default=50) #radius
     parser.add_argument('--edges', dest='edge_maxsize', type=int, default=30)
-    parser.add_argument('--labelshow', dest='show_labels', type=int, default=1)
+    parser.add_argument('--labelshow', dest='show_labels', type=int, default=0)
     parser.add_argument('--labels', dest='label_maxsize', type=int, default=50)
     parser.add_argument('--fromsave', dest='from_save', type=int, default=1)
     options = parser.parse_args(argv[1:])
