@@ -6,7 +6,7 @@ with open("README.md","r") as fh:
 setup(
   name = 'LCS-DIVE',
   packages = ['LCSDIVE'],
-  version = '1.0.3',
+  version = '1.0.5',
   license='License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
   description = 'Learning Classifier System Discovery and Visualization Environment',
   long_description_content_type="text/markdown",

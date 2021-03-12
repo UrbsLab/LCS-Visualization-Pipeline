@@ -2,7 +2,6 @@ import sys
 import time
 import pickle
 import seaborn
-from statistics import mean
 import csv
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist, pdist, squareform
@@ -14,7 +13,7 @@ from . import HClust
 from sklearn.metrics import silhouette_score
 import matplotlib as mpl
 
-from Utilities import find_elbow
+from .Utilities import find_elbow
 
 def job(experiment_path, rule_height_factor):
     job_start_time = time.time()
