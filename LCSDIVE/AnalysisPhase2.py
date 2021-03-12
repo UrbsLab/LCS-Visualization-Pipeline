@@ -5,11 +5,6 @@ import time
 from . import AnalysisPhase2ATJob
 from . import AnalysisPhase2RuleJob
 from . import AnalysisPhase2NetworkJob
-import networkx as nx
-import matplotlib.pyplot as plt
-import numpy as np
-import math
-import pickle
 
 '''Sample Run Code
 python AnalysisPhase2.py --o ../Outputs --e mp6 --cluster 0
