@@ -2,9 +2,9 @@ import sys
 import os
 import argparse
 import time
-import AnalysisPhase2ATJob
-import AnalysisPhase2RuleJob
-import AnalysisPhase2NetworkJob
+from . import AnalysisPhase2ATJob
+from . import AnalysisPhase2RuleJob
+from . import AnalysisPhase2NetworkJob
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np

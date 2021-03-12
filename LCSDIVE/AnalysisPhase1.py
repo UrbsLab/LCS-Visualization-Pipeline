@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-import AnalysisPhase1Job
+from . import AnalysisPhase1Job
 
 '''Sample Run Code
 python AnalysisPhase1.py --d ../Datasets/mp6_full.csv --o ../Outputs --e mp6 --inst Instance --group Group --iter 20000 --N 500 --nu 10 --cluster 0

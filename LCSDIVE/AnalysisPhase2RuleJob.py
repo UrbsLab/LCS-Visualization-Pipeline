@@ -10,7 +10,7 @@ import os
 import math
 import numpy as np
 import pandas as pd
-import HClust
+from . import HClust
 from sklearn.metrics import silhouette_score
 import matplotlib as mpl
 

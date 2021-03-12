@@ -1,11 +1,11 @@
 import sys
 import time
 import pickle
-from Utilities import find_elbow
+from .Utilities import find_elbow
 import numpy as np
 import pandas as pd
 import math
-import HClust
+from . import HClust
 import os
 import csv
 import matplotlib.pyplot as plt
