@@ -79,7 +79,7 @@ def main(argv):
     if options.random_state == 'None':
         random_state = random.randint(0, 1000000)
     else:
-        random_state = options.random_state
+        random_state = int(options.random_state)
     do_cluster = options.do_cluster
     memory1 = options.memory1
     memory2 = options.memory2
