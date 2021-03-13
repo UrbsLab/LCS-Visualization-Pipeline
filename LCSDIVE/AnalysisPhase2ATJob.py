@@ -1,11 +1,11 @@
 import sys
 import time
 import pickle
-from .Utilities import find_elbow
+from LCSDIVE.Utilities import find_elbow
 import numpy as np
 import pandas as pd
 import math
-from . import HClust
+from LCSDIVE import HClust
 import os
 import csv
 import matplotlib.pyplot as plt
@@ -41,8 +41,20 @@ def job(experiment_path, at_height_factor):
     for cv in range(cv_count):
         inst_label = cv_info[cv][8]
         partial_AT_scores = pd.read_csv(experiment_path + '/CV_' + str(cv) + '/normalizedATScores.csv')
-        partial_scores = partial_AT_scores.drop(inst_label, axis=1).values
+        partial_scores = partial_AT_scores.drop(inst_label, axis=1)
         partial_labels = partial_AT_scores[inst_label].values
+
+        # Fill in 0 columns for nonexistent columns in the AT of the CV (in the case individual CVs used different feature subsets)
+        partial_scores_headers = list(partial_scores.columns)
+        for feature_name in data_headers:
+            if not feature_name in partial_scores_headers:
+                partial_scores[feature_name] = np.zeros(len(partial_scores))
+
+        # Make sure AT columns are in the order of data_headers columns
+        partial_scores = partial_scores[data_headers]
+
+        #Merge
+        partial_scores = partial_scores.values
         for i in range(len(partial_labels)):
             if partial_labels[i] in merged_AT_dict:
                 merged_AT_dict[partial_labels[i]] += partial_scores[i]

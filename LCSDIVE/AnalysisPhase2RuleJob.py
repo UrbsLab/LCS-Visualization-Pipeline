@@ -9,11 +9,10 @@ import os
 import math
 import numpy as np
 import pandas as pd
-from . import HClust
+from LCSDIVE import HClust
 from sklearn.metrics import silhouette_score
 import matplotlib as mpl
-
-from .Utilities import find_elbow
+from LCSDIVE.Utilities import find_elbow
 
 def job(experiment_path, rule_height_factor):
     job_start_time = time.time()
@@ -30,29 +29,46 @@ def job(experiment_path, rule_height_factor):
     class_label = phase1_pickle[8]
     random_state = phase1_pickle[7]
 
+    cv_info = phase1_pickle[0]
+
     cmap = mpl.colors.ListedColormap(['xkcd:navy blue','xkcd:yellow'])
 
     # Merge Rule Population
     merged_population = []
+    cv_starting_indices = []
+    cv_index_counter = 0
     for cv in range(cv_count):
+        cv_starting_indices.append(cv_index_counter)
         file = open(experiment_path + '/CV_' + str(cv) + '/model', 'rb')
         model = pickle.load(file)
         for rule in model.population.popSet:
             merged_population.append(rule)
+            cv_index_counter += 1
 
     num_rules = len(merged_population)
     rule_specificity_array = []
     micro_to_macro_rule_index_map = {}
     micro_rule_index_count = 0
     macro_rule_index_count = 0
+
+    current_cv_counter = 0
+    cv_headers = None
+    cv_attribute_map = None # maps the cv's feature name to index in universal data headers
     for inst in range(num_rules):
+        if inst in cv_starting_indices:
+            cv_headers = cv_info[current_cv_counter][10]
+            cv_attribute_map = {}
+            for feature_name in cv_headers:
+                cv_attribute_map[feature_name] = np.where(data_headers == feature_name)[0][0]
+            current_cv_counter += 1
+
         rule = merged_population[inst]
-        a = []
-        for attribute in range(len(data_headers)):
-            if attribute in rule.specifiedAttList:
-                a.append(1)
-            else:
-                a.append(0)
+        a = [0]*len(data_headers)
+        for cv_attribute_index in rule.specifiedAttList:
+            feature_name = cv_headers[cv_attribute_index]
+            feature_index = cv_attribute_map[feature_name]
+            a[feature_index] = 1
+
         for microclassifier in range(rule.numerosity):
             rule_specificity_array.append(a)
             micro_to_macro_rule_index_map[micro_rule_index_count] = macro_rule_index_count
@@ -164,16 +180,41 @@ def job(experiment_path, rule_height_factor):
                     if not macro_rule_index in covered_macro_rule_indices:
                         covered_macro_rule_indices.append(macro_rule_index)
                         rule = merged_population[macro_rule_index]
-                        condition = []
+
+                        cv_range_indices = cv_starting_indices+[np.inf]
+                        for start_i in range(len(cv_range_indices)-1):
+                            start_val = cv_range_indices[start_i]
+                            end_val = cv_range_indices[start_i+1]
+
+                            if macro_rule_index >= start_val and macro_rule_index < end_val:
+                                break
+
+                        cv_headers = cv_info[start_i][10]
+                        cv_attribute_map = {}
+                        for feature_name in cv_headers:
+                            cv_attribute_map[feature_name] = np.where(data_headers == feature_name)[0][0]
+
+
+                        condition = [np.nan]*len(data_headers)
                         condition_counter = 0
-                        for attr_index in range(len(data_headers)):
-                            if attr_index in rule.specifiedAttList:
-                                condition.append(rule.condition[condition_counter])
-                                spec_sum[attr_index] += 1
-                                acc_spec_sum[attr_index] += rule.accuracy
+                        for feature_i in range(len(cv_headers)):
+                            if feature_i in rule.specifiedAttList:
+                                feature_name = cv_headers[feature_i]
+                                feature_index = cv_attribute_map[feature_name]
+                                condition[feature_index] = rule.condition[condition_counter]
+                                spec_sum[feature_index] += 1
+                                acc_spec_sum[feature_index] += rule.accuracy
                                 condition_counter += 1
                             else:
-                                condition.append('#')
+                                feature_name = cv_headers[feature_i]
+                                feature_index = cv_attribute_map[feature_name]
+                                condition[feature_index] = '#'
+
+                        for cv_attribute_index in rule.specifiedAttList:
+                            feature_name = cv_headers[cv_attribute_index]
+                            feature_index = cv_attribute_map[feature_name]
+                            condition[feature_index] = 1
+
                         writer.writerow(condition + [rule.phenotype, rule.accuracy, rule.numerosity,
                                                      len(rule.specifiedAttList) / len(data_headers),
                                                      rule.initTimeStamp])

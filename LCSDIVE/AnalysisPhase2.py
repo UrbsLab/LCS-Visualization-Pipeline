@@ -2,17 +2,17 @@ import sys
 import os
 import argparse
 import time
-from . import AnalysisPhase2ATJob
-from . import AnalysisPhase2RuleJob
-from . import AnalysisPhase2NetworkJob
+from LCSDIVE import AnalysisPhase2ATJob
+from LCSDIVE import AnalysisPhase2RuleJob
+from LCSDIVE import AnalysisPhase2NetworkJob
 
 '''Sample Run Code
 python AnalysisPhase2.py --o ../Outputs --e mp6 --cluster 0
 python AnalysisPhase2.py --o ../Outputs --e mp11 --cluster 0
 python AnalysisPhase2.py --o ../Outputs --e mp20 --cluster 0
 
-python AnalysisPhase2.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e test1 --cluster 0
-python AnalysisPhase2.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e test1 --cluster 0
+python AnalysisPhase2.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e root --cluster 0
+python AnalysisPhase2.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e root --cluster 0
 '''
 
 def main(argv):

@@ -13,6 +13,7 @@ def job(experiment_path):
     full_info = phase1_pickle[1]
     data_headers = full_info[2]
     cv_count = phase1_pickle[9]
+    cv_info = phase1_pickle[0]
 
     models = []
     for cv in range(cv_count):
@@ -23,9 +24,21 @@ def job(experiment_path):
     # Rule Specificity Network
     attribute_acc_specificity_counts = np.zeros(len(data_headers))
     merged_attribute_cooccurrences = []
+    cv_counter = 0
     for model in models:
-        attribute_acc_specificity_counts += np.array(model.get_final_attribute_specificity_list())
-        attribute_cooccurrences = model.get_final_attribute_coocurrences(data_headers, len(data_headers))
+        cv_headers = cv_info[cv_counter][10]
+        cv_attribute_map = {}
+        for feature_name in cv_headers:
+            cv_attribute_map[feature_name] = np.where(data_headers == feature_name)[0][0]
+
+        cv_spec_list = model.get_final_attribute_specificity_list()
+        transformed_cv_spec_list = [0]*len(data_headers)
+        for c in range(len(cv_headers)):
+            feature_name = cv_headers[c]
+            transformed_cv_spec_list[cv_attribute_map[feature_name]] = cv_spec_list[c]
+
+        attribute_acc_specificity_counts += np.array(transformed_cv_spec_list)
+        attribute_cooccurrences = model.get_final_attribute_coocurrences(cv_headers, len(cv_headers))
         if merged_attribute_cooccurrences == []:
             merged_attribute_cooccurrences = attribute_cooccurrences
         else:
@@ -39,6 +52,8 @@ def job(experiment_path):
                         shouldAdd = False
                 if shouldAdd:
                     merged_attribute_cooccurrences.append(attribute_cooccurrences[index])
+        cv_counter += 1
+
     acc_spec_dict = {}
     for header_index in range(len(data_headers)):
         acc_spec_dict[data_headers[header_index]] = attribute_acc_specificity_counts[header_index]

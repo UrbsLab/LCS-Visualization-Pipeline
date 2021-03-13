@@ -7,12 +7,12 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-from . import AnalysisPhase1_pretrainedJob
+from LCSDIVE import AnalysisPhase1_pretrainedJob
 import glob
 
 '''Sample Run Code
-python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e test1 --d /Users/robert/Desktop/outputs/test1/mp6/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp6/training/pickledModels --inst Instance --cv 3 --cluster 0
-python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e test1 --d /Users/robert/Desktop/outputs/test1/mp11/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp11/training/pickledModels --inst Instance --cv 3 --cluster 0
+python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e root --d /Users/robert/Desktop/outputs/test1/mp6/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp6/training/pickledModels --inst Instance --cv 3 --cluster 0
+python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e root --d /Users/robert/Desktop/outputs/test1/mp11/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp11/training/pickledModels --inst Instance --cv 3 --cluster 0
 
 
 '''
@@ -41,10 +41,7 @@ def main(argv):
     output_path = options.output_path
     experiment_name = options.experiment_name
 
-    if options.class_label == 'None':
-        class_label = None
-    else:
-        class_label = options.class_label
+    class_label = options.class_label
     if options.instance_label == 'None':
         instance_label = None
     else:
@@ -169,30 +166,53 @@ def main(argv):
         test_data_phenotypes = test_dfs[cv][class_label].values
         test_instance_labels = test_dfs[cv].index.get_level_values(use_inst_label).tolist()
         test_group_labels = test_dfs[cv].index.get_level_values(use_group_label).tolist()
+        cv_header_save = np.array(list(train_dfs[cv].drop(class_label, axis=1).columns))
 
         cv_info.append(
             [train_data_features, train_data_phenotypes, train_instance_labels, train_group_labels, test_data_features,
-             test_data_phenotypes, test_instance_labels, test_group_labels, use_inst_label, use_group_label])
+             test_data_phenotypes, test_instance_labels, test_group_labels, use_inst_label, use_group_label,cv_header_save])
         tt_inst += train_instance_labels
 
+    # Find Maximal Data Headers across all CVs
+    data_headers = []
+    for train_df in train_dfs:
+        data_headers.extend(list(train_df.columns))
+    data_headers = list(set(data_headers))
+    data_headers.remove(class_label)
+    data_headers = np.array(data_headers)
 
+    # Find Maximal Original Dataset
+    data_features = pd.DataFrame()
+    data_headers_left = list(copy.deepcopy(data_headers))
+    for i in range(len(train_dfs)):
+        full = pd.concat([train_dfs[i],test_dfs[i]])
+        cv_headers = list(full.columns)
+        for feature_name in cv_headers:
+            if feature_name in data_headers_left:
+                data_headers_left.remove(feature_name)
+                data_features[feature_name] = full[feature_name]
+    data_features = data_features.values
+
+    # Get data phenotypes, instance labels, group labels
     full_df = pd.concat([train_dfs[0],test_dfs[0]])
-    data_features = full_df.drop(class_label, axis=1).values
     data_phenotypes = full_df[class_label].values
-    data_headers = full_df.drop(class_label, axis=1).columns.values
     full_instance_labels = full_df.index.get_level_values(use_inst_label).tolist()
     full_group_labels = full_df.index.get_level_values(use_group_label).tolist()
+
+    # Group Color Map
     group_colors = {}
     for group_name in set(full_group_labels):
         random_color = randomHex()
         group_colors[group_name] = random_color
-    full_info = [data_features,data_phenotypes,data_headers,full_instance_labels,full_group_labels,group_colors]
 
+    # Export
+    full_info = [data_features,data_phenotypes,data_headers,full_instance_labels,full_group_labels,group_colors]
     phase1_pickle = [cv_info, full_info, visualize_true_clusters,'0','0','0','0',random_state,class_label,cv_count,'0','0',model_path]
     outfile = open(experiment_path+'/phase1pickle', 'wb')
     pickle.dump(phase1_pickle, outfile)
     outfile.close()
 
+    # Phase 1 Analysis
     for cv in range(cv_count):
         if do_cluster == 1:
             submitClusterJob(cv,experiment_path,memory1,memory2)

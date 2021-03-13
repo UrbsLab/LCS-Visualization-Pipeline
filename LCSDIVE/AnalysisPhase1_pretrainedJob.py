@@ -29,6 +29,7 @@ def job(experiment_path,cv):
     test_group_labels = cv_info[cv][7]
     inst_label = cv_info[cv][8]
     group_label = cv_info[cv][9]
+    cv_headers = cv_info[cv][10]
 
     # Create CV directory
     if not os.path.exists(experiment_path + '/CV_' + str(cv)):
@@ -56,23 +57,6 @@ def job(experiment_path,cv):
     outfile.write(str(model.score(test_data_features, test_data_phenotypes)))
     outfile.close()
 
-    # Save train and testing datasets into csvs
-    with open(experiment_path + '/CV_' + str(cv) + '/trainDataset.csv', mode='w') as file:
-        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(list(data_headers) + [class_label, inst_label, group_label])
-        for i in range(len(train_instance_labels)):
-            writer.writerow(list(train_data_features[i]) + [train_data_phenotypes[i]] + [train_instance_labels[i]] + [
-                train_group_labels[i]])
-    file.close()
-
-    with open(experiment_path + '/CV_' + str(cv) + '/testDataset.csv', mode='w') as file:
-        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(list(data_headers) + [class_label, inst_label, group_label])
-        for i in range(len(test_instance_labels)):
-            writer.writerow(list(test_data_features[i]) + [test_data_phenotypes[i]] + [test_instance_labels[i]] + [
-                test_group_labels[i]])
-    file.close()
-
     # Get AT Scores for each instance
     AT_scores = model.get_attribute_tracking_scores(instance_labels=np.array(train_instance_labels))
 
@@ -91,7 +75,7 @@ def job(experiment_path,cv):
     # Save Normalized AT Scores
     with open(experiment_path + '/CV_' + str(cv) + '/normalizedATScores.csv', mode='w') as file:
         writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow([inst_label] + list(data_headers))
+        writer.writerow([inst_label] + list(cv_headers))
         for i in range(len(train_instance_labels)):
             writer.writerow([train_instance_labels[i]] + normalized_AT_scores[i])
     file.close()

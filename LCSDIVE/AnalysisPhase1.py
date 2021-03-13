@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-from . import AnalysisPhase1Job
+from LCSDIVE import AnalysisPhase1Job
 
 '''Sample Run Code
 python AnalysisPhase1.py --d ../Datasets/mp6_full.csv --o ../Outputs --e mp6 --inst Instance --group Group --iter 20000 --N 500 --nu 10 --cluster 0
@@ -46,10 +46,8 @@ def main(argv):
     output_path = options.output_path
     experiment_name = options.experiment_name
     feature_selection_sample_size = options.feature_selection_sample_size
-    if options.class_label == 'None':
-        class_label = None
-    else:
-        class_label = options.class_label
+
+    class_label = options.class_label
     if options.instance_label == 'None':
         instance_label = None
     else:
