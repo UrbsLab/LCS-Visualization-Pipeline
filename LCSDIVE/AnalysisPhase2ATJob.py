@@ -106,6 +106,15 @@ def job(experiment_path, at_height_factor):
     # AT Clustermaps and CSV Analysis
     g = seaborn.clustermap(AT_full_df, metric='sqeuclidean', method='ward', cmap='plasma')
 
+    feature_order_indices = g.dendrogram_col.reordered_ind
+    new_feature_order = []
+    for i in feature_order_indices:
+        new_feature_order.append(data_headers[i])
+    with open(experiment_path + '/Composite/at/clustered_feature_order_left_to_right.csv', mode='w') as file:
+        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(new_feature_order)
+    file.close()
+
     cluster_tree = HClust.createClusterTree(g.dendrogram_row.linkage, full_instance_labels, AT_full_df.to_numpy())
     clusters, colors = cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100, metric='sqeuclidean',method='ward', random_state=random_state)
 

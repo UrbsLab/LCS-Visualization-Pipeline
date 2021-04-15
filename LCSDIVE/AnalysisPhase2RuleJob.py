@@ -95,8 +95,17 @@ def job(experiment_path, rule_height_factor):
 
     # Rule Population Clustermaps
     r = seaborn.clustermap(rule_df, metric='sqeuclidean', method='ward', cmap=cmap, cbar_kws={'ticks':[0,1]})
-    rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(micro_rule_index_count)),rule_df.to_numpy())
 
+    feature_order_indices = r.dendrogram_col.reordered_ind
+    new_feature_order = []
+    for i in feature_order_indices:
+        new_feature_order.append(data_headers[i])
+    with open(experiment_path + '/Composite/rulepop/clustered_feature_order_left_to_right.csv', mode='w') as file:
+        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(new_feature_order)
+    file.close()
+
+    rule_cluster_tree = HClust.createClusterTree(r.dendrogram_row.linkage, list(range(micro_rule_index_count)),rule_df.to_numpy())
     rule_clusters, rule_colors = rule_cluster_tree.getSignificantClusters(p_value=0.05, sample_count=100,metric='sqeuclidean', method='ward',random_state=random_state)
 
     rule_distortions = []

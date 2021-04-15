@@ -173,10 +173,11 @@ def main(argv):
         test_data_phenotypes = test_dfs[cv][class_label].values
         test_instance_labels = test_dfs[cv].index.get_level_values(use_inst_label).tolist()
         test_group_labels = test_dfs[cv].index.get_level_values(use_group_label).tolist()
+        cv_header_save = np.array(list(train_dfs[cv].drop(class_label, axis=1).columns))
 
         cv_info.append(
             [train_data_features, train_data_phenotypes, train_instance_labels, train_group_labels, test_data_features,
-             test_data_phenotypes, test_instance_labels, test_group_labels, use_inst_label, use_group_label])
+             test_data_phenotypes, test_instance_labels, test_group_labels, use_inst_label, use_group_label,cv_header_save])
         tt_inst += train_instance_labels
 
     # Group Colors and Instance Labels

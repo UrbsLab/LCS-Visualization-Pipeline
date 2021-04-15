@@ -8,6 +8,10 @@ from scipy.spatial import distance
 import copy
 
 '''Sample Run Code
+python NetworkVisualization.py --o ../Outputs/Final --e mp11
+python NetworkVisualization.py --o ../Outputs/ --e mp11_CRA2
+python NetworkVisualization.py --o ../Outputs/Final --e mp6
+python NetworkVisualization.py --o ../Outputs/Final --e d1
 python NetworkVisualization.py --o ../Outputs/Final --e dietadj
 '''
 
@@ -18,7 +22,7 @@ def main(argv):
     parser.add_argument('--e', dest='experiment_name', type=str, help='name of experiment (no spaces)')
     parser.add_argument('--nodep', dest='node_power', type=int, default=3)
     parser.add_argument('--edgep', dest='edge_power', type=int, default=3)
-    parser.add_argument('--nodes', dest='node_maxsize', type=int, default=50) #radius
+    parser.add_argument('--nodes', dest='node_maxsize', type=int, default=50) #radius, usually 50
     parser.add_argument('--edges', dest='edge_maxsize', type=int, default=30)
     parser.add_argument('--labelshow', dest='show_labels', type=int, default=0)
     parser.add_argument('--labels', dest='label_maxsize', type=int, default=50)
@@ -67,7 +71,7 @@ def main(argv):
     BLACK = (0, 0, 0)
     WHITE = (255,255,255)
     NODECOLOR = (255,51,119)
-    EDGECOLOR = (224,184,255)
+    EDGECOLOR = (100,100,100)
 
     originalasd = copy.deepcopy(acc_spec_dict)
     originalel = copy.deepcopy(edge_list)
@@ -93,12 +97,12 @@ def main(argv):
     if not save_opened:
         label_display = {}
         for nodename in acc_spec_dict:
-            font = pygame.font.SysFont("monospace", max(20,int(acc_spec_dict[nodename]/node_maxsize*label_maxsize)))
+            font = pygame.font.SysFont("monospace", max(30,int(acc_spec_dict[nodename]/node_maxsize*label_maxsize)))
             label_display[nodename] = [show_labels,font]
     else:
         label_display = {}
         for nodename in acc_spec_dict:
-            font = pygame.font.SysFont("monospace", max(20,int(acc_spec_dict[nodename] / node_maxsize * label_maxsize))) #font minsize is 10
+            font = pygame.font.SysFont("monospace", max(30,int(acc_spec_dict[nodename] / node_maxsize * label_maxsize))) #font minsize is 30
             label_display[nodename] = [info[4][nodename], font]
 
     dragged_nodes = []
