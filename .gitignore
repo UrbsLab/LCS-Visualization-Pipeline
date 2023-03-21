@@ -1,8 +1,6 @@
 __pycache__/
 */__pycache__/
 .idea/
-Datasets/
 Outputs/
-venv/
 .DS_Store
 */.DS_Store
