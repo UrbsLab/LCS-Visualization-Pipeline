@@ -71,6 +71,7 @@ python AnalysisPhase1_pretrained.py --d ../Datasets --m ../Models --o ../Outputs
 This file can be run instead of **AnalysisPhase1.py** if you already have run ExStraCS model through STREAMLINE. This file will reorganize those precreated files into a format consistent with the outputs of **AnalysisPhase1.py**, such that AnalysisPhase2.py can be run smoothly. There exists a few command line arguments:
 
 | Argument | Description | Default |
+| ---------- | --------------------  | ---------- |
 | --s | file path to your STREAMLINE output directory | MANDATORY |
 | --e | name of STREAMLINE experiment | MANDATORY |
 | --d | name of STREAMLINE dataset to run LCS-DIVE | MANDATORY |
@@ -139,3 +140,9 @@ Once this command is run, a GUI window will pop up. From there you can
 2) Press **l** over a node to make its label appear/disappear
 3) Press X to close the window. This automatically saves your configuration and creates a new visualization. When you run this again, your previously saved configuration will pop up for you to continue working (unless **--from_save** is 0).
 
+
+# Analysis Pipeline
+
+## AnalysisPipeline3.py
+
+## AnalysisPipeline3_fromstreamline.py
