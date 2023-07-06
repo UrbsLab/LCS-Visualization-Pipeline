@@ -6,6 +6,6 @@ skrebate==0.62
 scikit-ExSTraCS==1.0.5
 networkx==2.4
 matplotlib==3.1.1
-scipy==1.2.1
+scipy==1.10.0
 pygame==1.9.6
 fastcluster==1.1.26
