@@ -51,11 +51,14 @@ def main(argv):
     with open(streamline_path + '/' + experiment_name + '/' + 'metadata.pickle', 'rb') as file:
         metadata = pickle.load(file)
 
+    with open(streamline_path + '/' + experiment_name + '/' + 'algInfo.pickle', 'rb') as file:
+        algInfo = pickle.load(file)
+
     class_label = metadata["Class Label"]
     instance_label = metadata["Instance Label"]
     cv_count = metadata["CV Partitions"]
     random_state = metadata["Random Seed"]
-    if not metadata["ExSTraCS"] == "True":
+    if not algInfo["ExSTraCS"][0] == True:
         raise Exception("ExSTraCS not run in STREAMLINE")
     
     group_label = None
