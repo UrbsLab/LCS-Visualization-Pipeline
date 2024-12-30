@@ -13,7 +13,7 @@ There are 5 files that are runnable from the command line: **AnalysisPhase1.py**
 You can run them all from the LCSDIVE folder.
 
 ## AnalysisPhase1.py
-This file runs ExSTraCS training on your dataset, and is the first file to run on a new dataset. If you have already completed ExSTraCS training from some other pipeline, you should use **AnalysisPhase1_pretrained.py** or **AnalysisPhase1_fromstreamline.py** instead. There exists a few command line arguments:
+This file runs ExSTraCS training on your dataset, and is the first file to run on a new dataset. If you have already completed ExSTraCS training from some other pipeline, you should use **AnalysisPhase1_fromstreamline.py** if you have a STREAMLINE run of ExSTraCS or **AnalysisPhase1_pretrained.py** in you have some othe run of ExSTraCS instead. There exists a few command line arguments:
 
 | Argument | Description | Default |
 | ---------- | --------------------  | ---------- |
@@ -32,7 +32,7 @@ This file runs ExSTraCS training on your dataset, and is the first file to run o
 | --rc | rule compaction method | None |
 | --random-state | random seed for fixed results | None |
 | --fssample | skrebate feature selection sample size | 1000 |
-| --cluster | if should run LCS-DIVE Phase 1 on compute cluster | 1 |
+| --cluster | setting to run LCS-DIVE Phase 1 on compute cluster | 0 for No Cluster, 1 for LSF, 2 for SLURM |
 | --m1 | cluster job soft memory limit (Gb) | 2 |
 | --m2 | cluster job hard memory limit (Gb) | 3 |
 
@@ -56,7 +56,7 @@ This file can be run instead of **AnalysisPhase1.py** if you already have prespl
 | --inst | column name in dataset of row id (leave out if N/A) | None |
 | --cv | number of CV partitions during training | 3 |
 | --random-state | random seed for fixed results | None |
-| --cluster | if should run LCS-DIVE Phase 1 on compute cluster | 1 |
+| --cluster | setting to run LCS-DIVE Phase 1 on compute cluster | 0 for No Cluster, 1 for LSF, 2 for SLURM |
 | --m1 | cluster job soft memory limit (Gb) | 2 |
 | --m2 | cluster job hard memory limit (Gb) | 3 |
 
@@ -76,7 +76,7 @@ This file can be run instead of **AnalysisPhase1.py** if you already have run Ex
 | --e | name of STREAMLINE experiment | MANDATORY |
 | --d | name of STREAMLINE dataset to run LCS-DIVE | MANDATORY |
 | --o | file path to your LCS-DIVE output directory | MANDATORY |
-| --cluster | if should run LCS-DIVE Phase 1 on compute cluster | 1 |
+| --cluster | setting to run LCS-DIVE Phase 1 on compute cluster | 0 for No Cluster, 1 for LSF, 2 for SLURM |
 | --m1 | cluster job soft memory limit (Gb) | 2 |
 | --m2 | cluster job hard memory limit (Gb) | 3 |
 
@@ -96,7 +96,7 @@ This file runs the visualization step of LCS-DIVE (Feature Tracking Visualizatio
 | --e | for a given experiment, must match that from Phase 1 | MANDATORY |
 | --rheight | height to width ratio of rule population heatmaps | 1 |
 | --aheight | height to width ratio of feature tracking heatmaps | 1 |
-| --cluster | if should run LCS-DIVE Phase 2 on compute cluster | 1 |
+| --cluster | setting to run LCS-DIVE Phase 2 on compute cluster | 0 for No Cluster, 1 for LSF, 2 for SLURM |
 | --am1 | feature tracking cluster job soft memory limit (Gb) | 2 |
 | --am2 | feature tracking cluster job hard memory limit (Gb) | 3 |
 | --rm1 | rule population cluster job soft memory limit (Gb) | 5 |
@@ -139,10 +139,3 @@ Once this command is run, a GUI window will pop up. From there you can
 1) Drag nodes around
 2) Press **l** over a node to make its label appear/disappear
 3) Press X to close the window. This automatically saves your configuration and creates a new visualization. When you run this again, your previously saved configuration will pop up for you to continue working (unless **--from_save** is 0).
-
-
-# Analysis Pipeline
-
-## AnalysisPipeline3.py
-
-## AnalysisPipeline3_fromstreamline.py
