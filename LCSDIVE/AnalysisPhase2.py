@@ -2,11 +2,12 @@ import sys
 import os
 import argparse
 import time
-from LCSDIVE import AnalysisPhase2ATJob
-from LCSDIVE import AnalysisPhase2RuleJob
-from LCSDIVE import AnalysisPhase2NetworkJob
+import AnalysisPhase2ATJob
+import AnalysisPhase2RuleJob
+import AnalysisPhase2NetworkJob
 
 '''Sample Run Code
+python AnalysisPhase2.py --o ./Outputs --e demo_experiment --cluster 0
 python AnalysisPhase2.py --o ../Outputs --e mp6 --cluster 0
 python AnalysisPhase2.py --o ../Outputs --e mp11 --cluster 0
 python AnalysisPhase2.py --o ../Outputs --e mp20 --cluster 0
@@ -60,6 +61,11 @@ def main(argv):
         submitClusterNetworkJob(experiment_path,network_memory1,network_memory2)
         if do_rule_cluster == 1:
             submitClusterRuleJob(experiment_path,rule_height_factor,rule_memory1,rule_memory2)
+    elif do_cluster == 2:
+        submitClusterATJobSLURM(experiment_path,at_height_factor,at_memory1,at_memory2)
+        submitClusterNetworkJobSLURM(experiment_path,network_memory1,network_memory2)
+        if do_rule_cluster == 1:
+            submitClusterRuleJobSLURM(experiment_path,rule_height_factor,rule_memory1,rule_memory2)
     else:
         submitLocalATJob(experiment_path,at_height_factor)
         if do_rule_cluster == 1:
@@ -118,6 +124,63 @@ def submitClusterNetworkJob(experiment_path,m1,m2):
     sh_file.write('python ' + this_file_path + '/AnalysisPhase2NetworkJob.py ' + experiment_path + '\n')
     sh_file.close()
     os.system('bsub -q i2c2_normal -R "rusage[mem=' + str(m1) + 'G]" -M ' + str(m2) + 'G < ' + job_name)
+
+def submitClusterATJobSLURM(experiment_path, at_height_factor, m1, m2):
+    job_ref = str(time.time())
+    job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
+    sh_file = open(job_name, 'w')
+    sh_file.write('#!/bin/bash\n')
+    sh_file.write('#SBATCH --job-name=' + job_ref + '\n')
+    sh_file.write('#SBATCH --output=' + experiment_path + '/logs/' + job_ref + '.out\n')
+    sh_file.write('#SBATCH --error=' + experiment_path + '/logs/' + job_ref + '.err\n')
+    sh_file.write('#SBATCH --mem=' + str(m2) + 'G\n')
+    sh_file.write('#SBATCH --ntasks=1\n')
+    sh_file.write('#SBATCH --cpus-per-task=1\n')
+    sh_file.write('#SBATCH --partition=defq\n')
+
+    this_file_path = os.path.dirname(os.path.realpath(__file__))
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase2ATJob.py ' + experiment_path + ' ' + str(at_height_factor) + '\n')
+    sh_file.close()
+
+    os.system('sbatch ' + job_name)
+
+def submitClusterRuleJobSLURM(experiment_path, rule_height_factor, m1, m2):
+    job_ref = str(time.time())
+    job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
+    sh_file = open(job_name, 'w')
+    sh_file.write('#!/bin/bash\n')
+    sh_file.write('#SBATCH --job-name=' + job_ref + '\n')
+    sh_file.write('#SBATCH --output=' + experiment_path + '/logs/' + job_ref + '.out\n')
+    sh_file.write('#SBATCH --error=' + experiment_path + '/logs/' + job_ref + '.err\n')
+    sh_file.write('#SBATCH --mem=' + str(m2) + 'G\n')
+    sh_file.write('#SBATCH --ntasks=1\n')
+    sh_file.write('#SBATCH --cpus-per-task=1\n')
+    sh_file.write('#SBATCH --partition=defq\n')
+
+    this_file_path = os.path.dirname(os.path.realpath(__file__))
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase2RuleJob.py ' + experiment_path + ' ' + str(rule_height_factor) + '\n')
+    sh_file.close()
+
+    os.system('sbatch ' + job_name)
+
+def submitClusterNetworkJobSLURM(experiment_path, m1, m2):
+    job_ref = str(time.time())
+    job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
+    sh_file = open(job_name, 'w')
+    sh_file.write('#!/bin/bash\n')
+    sh_file.write('#SBATCH --job-name=' + job_ref + '\n')
+    sh_file.write('#SBATCH --output=' + experiment_path + '/logs/' + job_ref + '.out\n')
+    sh_file.write('#SBATCH --error=' + experiment_path + '/logs/' + job_ref + '.err\n')
+    sh_file.write('#SBATCH --mem=' + str(m2) + 'G\n')
+    sh_file.write('#SBATCH --ntasks=1\n')
+    sh_file.write('#SBATCH --cpus-per-task=1\n')
+    sh_file.write('#SBATCH --partition=defq\n')
+
+    this_file_path = os.path.dirname(os.path.realpath(__file__))
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase2NetworkJob.py ' + experiment_path + '\n')
+    sh_file.close()
+
+    os.system('sbatch ' + job_name)
 
 
 if __name__ == '__main__':

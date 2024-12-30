@@ -7,15 +7,8 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-from LCSDIVE import AnalysisPhase1_pretrainedJob
+import AnalysisPhase1_pretrainedJob
 import glob
-
-'''Sample Run Code
-python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp6/viz-outputs --e root --d /Users/robert/Desktop/outputs/test1/mp6/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp6/training/pickledModels --inst Instance --cv 3 --cluster 0
-python AnalysisPhase1_pretrained.py --o /Users/robert/Desktop/outputs/test1/mp11/viz-outputs --e root --d /Users/robert/Desktop/outputs/test1/mp11/CVDatasets --m /Users/robert/Desktop/outputs/test1/mp11/training/pickledModels --inst Instance --cv 3 --cluster 0
-
-
-'''
 
 def main(argv):
     # Parse arguments
@@ -216,6 +209,8 @@ def main(argv):
     for cv in range(cv_count):
         if do_cluster == 1:
             submitClusterJob(cv,experiment_path,memory1,memory2)
+        elif do_cluster == 2:
+            submitClusterJobSLURM(cv,experiment_path,memory1,memory2)
         else:
             submitLocalJob(cv,experiment_path)
 
@@ -236,6 +231,26 @@ def submitClusterJob(cv,experiment_path,memory1,memory2):
     sh_file.write('python ' + this_file_path + '/AnalysisPhase1_pretrainedJob.py ' + experiment_path + " " + str(cv) + '\n')
     sh_file.close()
     os.system('bsub -q i2c2_normal -R "rusage[mem='+str(memory1)+'G]" -M '+str(memory2)+'G < ' + job_name)
+
+def submitClusterJobSLURM(cv, experiment_path, memory1, memory2):
+    job_ref = str(time.time())
+    job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
+    sh_file = open(job_name, 'w')
+    sh_file.write('#!/bin/bash\n')
+    sh_file.write('#SBATCH --job-name=' + job_ref + '\n')
+    sh_file.write('#SBATCH --output=' + experiment_path + '/logs/' + job_ref + '.out\n')
+    sh_file.write('#SBATCH --error=' + experiment_path + '/logs/' + job_ref + '.err\n')
+    sh_file.write('#SBATCH --mem=' + str(memory2) + 'G\n')
+    sh_file.write('#SBATCH --ntasks=1\n')
+    sh_file.write('#SBATCH --cpus-per-task=1\n')
+    sh_file.write('#SBATCH --partition=defq\n')
+
+    this_file_path = os.path.dirname(os.path.realpath(__file__))
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_pretrainedJob.py ' + experiment_path + ' ' + str(cv) + '\n')
+    sh_file.close()
+
+    os.system('sbatch ' + job_name)
+
     ####################################################################################################################
 
 def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed,method,match_label):

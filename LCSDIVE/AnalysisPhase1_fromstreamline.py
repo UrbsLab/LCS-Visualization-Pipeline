@@ -89,11 +89,11 @@ def main(argv):
     for i in range(cv_count):
         dataset_train = None
         dataset_test = None
-        for file in glob.glob(data_path+'/*_'+str(i)+'_Train.csv'):
+        for file in glob.glob(data_path+'/*_CV_'+str(i)+'_Train.csv'):
             dataset_train = pd.read_csv(file, sep=',')
             dataset_train = dataset_train.loc[:, ~dataset_train.columns.str.contains('^Unnamed')]
             dataset_train = dataset_train.assign(group=np.ones(dataset_train.values.shape[0]))
-        for file in glob.glob(data_path+'/*_'+str(i)+'_Test.csv'):
+        for file in glob.glob(data_path+'/*_CV_'+str(i)+'_Test.csv'):
             dataset_test = pd.read_csv(file, sep=',')
             dataset_test = dataset_test.loc[:, ~dataset_test.columns.str.contains('^Unnamed')]
             dataset_test = dataset_test.assign(group=np.ones(dataset_test.values.shape[0]))
@@ -219,6 +219,8 @@ def main(argv):
     for cv in range(cv_count):
         if do_cluster == 1:
             submitClusterJob(cv,experiment_path,memory1,memory2)
+        elif do_cluster == 2:
+            submitClusterJobSLURM(cv,experiment_path,memory1,memory2)
         else:
             submitLocalJob(cv,experiment_path)
 
@@ -240,6 +242,25 @@ def submitClusterJob(cv,experiment_path,memory1,memory2):
     sh_file.close()
     os.system('bsub -q i2c2_normal -R "rusage[mem='+str(memory1)+'G]" -M '+str(memory2)+'G < ' + job_name)
     ####################################################################################################################
+
+def submitClusterJobSLURM(cv, experiment_path, memory1, memory2):
+    job_ref = str(time.time())
+    job_name = experiment_path + '/jobs/' + job_ref + '_run.sh'
+    sh_file = open(job_name, 'w')
+    sh_file.write('#!/bin/bash\n')
+    sh_file.write('#SBATCH --job-name=' + job_ref + '\n')
+    sh_file.write('#SBATCH --output=' + experiment_path + '/logs/' + job_ref + '.out\n')
+    sh_file.write('#SBATCH --error=' + experiment_path + '/logs/' + job_ref + '.err\n')
+    sh_file.write('#SBATCH --mem=' + str(memory2) + 'G\n')
+    sh_file.write('#SBATCH --ntasks=1\n')
+    sh_file.write('#SBATCH --cpus-per-task=1\n')
+    sh_file.write('#SBATCH --partition=defq\n')
+
+    this_file_path = os.path.dirname(os.path.realpath(__file__))
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_fromstreamlineJob.py ' + experiment_path + ' ' + str(cv) + '\n')
+    sh_file.close()
+
+    os.system('sbatch ' + job_name)
 
 def randomHex():
     s = '#'
