@@ -1,3 +1,4 @@
+
 import random
 import copy
 import csv
@@ -127,14 +128,14 @@ class MPGenerator:
                 writer.writerow(inst)
 
 if __name__ == '__main__':
-    # m = MPGenerator(bits=6,classCount=2,do_instances=False)
-    # m.exportInstances('mp6_noinstances',instanceCount=500)
+    m = MPGenerator(bits=6,classCount=2,do_instances=False)
+    m.exportInstances('mp6_noinstances',instanceCount=500)
 
-    # m = MPGenerator(bits=6, classCount=2,do_groups=False)
-    # m.exportInstances('mp6_nogroups', instanceCount=500)
+    m = MPGenerator(bits=6, classCount=2,do_groups=False)
+    m.exportInstances('mp6_nogroups', instanceCount=500)
 
-    # m = MPGenerator(bits=6, classCount=2,do_instances=False,do_groups=False)
-    # m.exportInstances('mp6_none', instanceCount=500)
+    m = MPGenerator(bits=6, classCount=2,do_instances=False,do_groups=False)
+    m.exportInstances('mp6_none', instanceCount=500)
 
     m = MPGenerator(bits=6, classCount=2)
     m.exportInstances('mp6_full', instanceCount=500)
@@ -142,5 +143,5 @@ if __name__ == '__main__':
     m = MPGenerator(bits=11, classCount=2)
     m.exportInstances('mp11_full', instanceCount=2000)
 
-    # m = MPGenerator(bits=20, classCount=2)
-    # m.exportInstances('mp20_full', instanceCount=5000)
+    m = MPGenerator(bits=20, classCount=2)
+    m.exportInstances('mp20_full', instanceCount=5000)

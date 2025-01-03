@@ -7,58 +7,64 @@ import pandas as pd
 import numpy as np
 import copy
 import pickle
-import AnalysisPhase1_pretrainedJob
+import AnalysisPhase1_fromstreamlineJob
 import glob
+
+'''
+Sample Run Code
+python AnalysisPhase1_fromstreamline.py --s /home/bandheyh/STREAMLINE/lcs/ --e lcs --d demodata --o Outputs/ --cluster 0
+'''
 
 def main(argv):
     # Parse arguments
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--d', dest='data_path', type=str, help='path to directory containing presplit train/test datasets ending with _CV_Test/Train.csv')
-    parser.add_argument('--m', dest='model_path', type=str, help='path to directory containing pretrained ExSTraCS Models labeled ExStraCS_CV')
+    parser.add_argument('--s', dest='streamline_path', type=str, help='path to output directory')
     parser.add_argument('--o', dest='output_path', type=str, help='path to output directory')
-    parser.add_argument('--e', dest='experiment_name', type=str, help='name of experiment (no spaces)')
-
-    parser.add_argument('--class', dest='class_label', type=str, default="Class")
-    parser.add_argument('--inst', dest='instance_label', type=str, default="None")
-
-    parser.add_argument('--cv', dest='cv_partitions', type=int, help='number of CV partitions', default=3)
-    parser.add_argument('--random-state',dest='random_state',type=str,default='None')
+    parser.add_argument('--e', dest='experiment_name', type=str, help='name of streamline experiment')
+    parser.add_argument('--d', dest='dataset_name', type=str, help='dataset name')
 
     parser.add_argument('--cluster', dest='do_cluster', type=int, default=1)
     parser.add_argument('--m1', dest='memory1', type=int, default=2)
     parser.add_argument('--m2', dest='memory2', type=int, default=3)
 
     options = parser.parse_args(argv[1:])
-    data_path = options.data_path
-    model_path = options.model_path
-    output_path = options.output_path
+    streamline_path = options.streamline_path
     experiment_name = options.experiment_name
 
-    class_label = options.class_label
-    if options.instance_label == 'None':
-        instance_label = None
-    else:
-        instance_label = options.instance_label
-    group_label = None
-    visualize_true_clusters = False
-
-    cv_count = options.cv_partitions
-
-    if options.random_state == 'None':
-        random_state = random.randint(0, 1000000)
-    else:
-        random_state = int(options.random_state)
-    do_cluster = options.do_cluster
-    memory1 = options.memory1
-    memory2 = options.memory2
-
-    # Create experiment folders and check path validity
-    if not os.path.exists(data_path):
-        raise Exception("Provided data_path does not exist")
+    # Check experiment folders and check path validity
+    if not os.path.exists(streamline_path):
+        raise Exception("Provided streamline_path does not exist")
 
     for char in experiment_name:
         if not char in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_':
             raise Exception('Experiment Name must be alphanumeric')
+
+    dataset_name = options.dataset_name
+    data_path = streamline_path + '/' + experiment_name + '/' + dataset_name + '/CVDatasets/' 
+    model_path = streamline_path + '/' + experiment_name + '/' + dataset_name + '/models/pickledModels/'
+
+    print(streamline_path + '/' + experiment_name + '/' + dataset_name)
+    if not os.path.exists(streamline_path + '/' + experiment_name + '/' + dataset_name):
+        raise Exception("Provided Dataset does not exist in STREAMLINE Run")
+
+
+    with open(streamline_path + '/' + experiment_name + '/' + 'metadata.pickle', 'rb') as file:
+        metadata = pickle.load(file)
+
+    with open(streamline_path + '/' + experiment_name + '/' + 'algInfo.pickle', 'rb') as file:
+        algInfo = pickle.load(file)
+
+    class_label = metadata["Class Label"]
+    instance_label = metadata["Instance Label"]
+    cv_count = metadata["CV Partitions"]
+    random_state = metadata["Random Seed"]
+    if not algInfo["ExSTraCS"][0] == True:
+        raise Exception("ExSTraCS not run in STREAMLINE")
+    
+    group_label = None
+    visualize_true_clusters = False
+
+    output_path = options.output_path
 
     experiment_path = output_path + '/' + experiment_name
     if not os.path.exists(output_path):
@@ -67,6 +73,10 @@ def main(argv):
         os.mkdir(experiment_path)
         os.mkdir(output_path + '/' + experiment_name + '/jobs')
         os.mkdir(output_path + '/' + experiment_name + '/logs')
+
+    do_cluster = options.do_cluster
+    memory1 = options.memory1
+    memory2 = options.memory2
 
     # Random seed
     random.seed(random_state)
@@ -79,11 +89,11 @@ def main(argv):
     for i in range(cv_count):
         dataset_train = None
         dataset_test = None
-        for file in glob.glob(data_path+'/*_'+str(i)+'_Train.csv'):
+        for file in glob.glob(data_path+'/*_CV_'+str(i)+'_Train.csv'):
             dataset_train = pd.read_csv(file, sep=',')
             dataset_train = dataset_train.loc[:, ~dataset_train.columns.str.contains('^Unnamed')]
             dataset_train = dataset_train.assign(group=np.ones(dataset_train.values.shape[0]))
-        for file in glob.glob(data_path+'/*_'+str(i)+'_Test.csv'):
+        for file in glob.glob(data_path+'/*_CV_'+str(i)+'_Test.csv'):
             dataset_test = pd.read_csv(file, sep=',')
             dataset_test = dataset_test.loc[:, ~dataset_test.columns.str.contains('^Unnamed')]
             dataset_test = dataset_test.assign(group=np.ones(dataset_test.values.shape[0]))
@@ -216,7 +226,7 @@ def main(argv):
 
     ####################################################################################################################
 def submitLocalJob(cv,experiment_path):
-    AnalysisPhase1_pretrainedJob.job(experiment_path,cv)
+    AnalysisPhase1_fromstreamlineJob.job(experiment_path,cv)
 
 def submitClusterJob(cv,experiment_path,memory1,memory2):
     job_ref = str(time.time())
@@ -228,9 +238,10 @@ def submitClusterJob(cv,experiment_path,memory1,memory2):
     sh_file.write('#BSUB -e ' + experiment_path + '/logs/' + job_ref + '.e\n')
 
     this_file_path = os.path.dirname(os.path.realpath(__file__))
-    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_pretrainedJob.py ' + experiment_path + " " + str(cv) + '\n')
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_fromstreamlineJob.py ' + experiment_path + " " + str(cv) + '\n')
     sh_file.close()
     os.system('bsub -q i2c2_normal -R "rusage[mem='+str(memory1)+'G]" -M '+str(memory2)+'G < ' + job_name)
+    ####################################################################################################################
 
 def submitClusterJobSLURM(cv, experiment_path, memory1, memory2):
     job_ref = str(time.time())
@@ -246,92 +257,10 @@ def submitClusterJobSLURM(cv, experiment_path, memory1, memory2):
     sh_file.write('#SBATCH --partition=defq\n')
 
     this_file_path = os.path.dirname(os.path.realpath(__file__))
-    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_pretrainedJob.py ' + experiment_path + ' ' + str(cv) + '\n')
+    sh_file.write('python ' + this_file_path + '/AnalysisPhase1_fromstreamlineJob.py ' + experiment_path + ' ' + str(cv) + '\n')
     sh_file.close()
 
     os.system('sbatch ' + job_name)
-
-    ####################################################################################################################
-
-def cv_partitioner(td, cv_partitions, outcomeLabel, randomSeed,method,match_label):
-    # Shuffle instances to avoid potential biases
-    td = td.sample(frac=1, random_state=randomSeed).reset_index(drop=True)
-
-    # Temporarily convert data frame to list of lists (save header for later)
-    header = list(td.columns.values)
-    datasetList = list(list(x) for x in zip(*(td[x].values.tolist() for x in td.columns)))
-
-    # Handle Special Variables for Nominal Outcomes
-    outcomeIndex = td.columns.get_loc(outcomeLabel)
-    classList = []
-    for each in datasetList:
-        if each[outcomeIndex] not in classList:
-            classList.append(each[outcomeIndex])
-
-    # Initialize partitions
-    partList = []
-    for x in range(cv_partitions):
-        partList.append([])
-
-    if method == 'stratified':
-        # Stratified Partitioning Method-----------------------
-        byClassRows = [[] for i in range(len(classList))]  # create list of empty lists (one for each class)
-        for row in datasetList:
-            # find index in classList corresponding to the class of the current row.
-            cIndex = classList.index(row[outcomeIndex])
-            byClassRows[cIndex].append(row)
-
-        for classSet in byClassRows:
-            currPart = 0
-            counter = 0
-            for row in classSet:
-                partList[currPart].append(row)
-                counter += 1
-                currPart = counter % cv_partitions
-    elif method == 'matched':
-        match_index = td.columns.get_loc(match_label)
-        match_list = []
-        for row in datasetList:
-            if row[match_index] not in match_list:
-                match_list.append(row[match_index])
-
-        byMatchRows = [[] for i in range(len(match_list))]  # create list of empty lists (one for each match group)
-        for row in datasetList:
-            # find index in matchList corresponding to the matchset of the current row.
-            mIndex = match_list.index(row[match_index])
-            row.pop(match_index)  # remove match column from partition output
-            byMatchRows[mIndex].append(row)
-
-        currPart = 0
-        counter = 0
-        for matchSet in byMatchRows:  # Go through each unique set of matched instances
-            for row in matchSet:  # put all of the instances
-                partList[currPart].append(row)
-            # move on to next matchset being placed in the next partition.
-            counter += 1
-            currPart = counter % cv_partitions
-
-        header.pop(match_index)  # remove match column from partition output
-
-    # Create Output
-    train_dfs = []
-    test_dfs = []
-    for part in range(0, cv_partitions):
-        testList = partList[part]  # Assign testing set as the current partition
-
-        trainList = []
-        tempList = []
-        for x in range(0, cv_partitions):
-            tempList.append(x)
-        tempList.pop(part)
-
-        for v in tempList:  # for each training partition
-            trainList.extend(partList[v])
-
-        train_dfs.append(pd.DataFrame(trainList, columns=header))
-        test_dfs.append(pd.DataFrame(testList, columns=header))
-
-    return train_dfs, test_dfs
 
 def randomHex():
     s = '#'

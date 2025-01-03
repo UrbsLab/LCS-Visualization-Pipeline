@@ -9,10 +9,10 @@ import os
 import math
 import numpy as np
 import pandas as pd
-from LCSDIVE import HClust
+import HClust
 from sklearn.metrics import silhouette_score
 import matplotlib as mpl
-from LCSDIVE.Utilities import find_elbow
+from Utilities import find_elbow
 
 def job(experiment_path, rule_height_factor):
     job_start_time = time.time()
